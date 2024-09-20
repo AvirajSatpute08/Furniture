@@ -18,6 +18,9 @@
     "razorpay": "^2.9.4",
     "touch": "^3.1.0"
   },
+   "engines": {
+  "node": "20.11.0"
+},
   "name": "furniture_project",
   "version": "1.0.0",
   "description": "Funiture Project",
@@ -29,6 +32,6 @@
     "Furniture",
     "Project"
   ],
-  "author": "Rushikesh Pathade",
+  "author": "Aviraj Satpute",
   "license": "ISC"
 }
