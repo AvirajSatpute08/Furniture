@@ -16,7 +16,8 @@
     "mysql": "^2.18.1",
     "nodemon": "^3.1.0",
     "razorpay": "^2.9.4",
-    "touch": "^3.1.0"
+    "touch": "^3.1.0",
+    "node": "20.11.0"
   },
    "engines": {
   "node": "20.11.0"
@@ -32,6 +33,6 @@
     "Furniture",
     "Project"
   ],
-  "author": "Aviraj Satpute",
+  "author": "Aviraj Satpute", 
   "license": "ISC"
 }
