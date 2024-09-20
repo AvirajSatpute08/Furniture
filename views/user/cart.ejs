@@ -50,7 +50,15 @@
                                     <td class="product-name">
                                         <h2 class="h5 text-black"><%=products[i].product_name%></h2>
                                     </td>
-                                    <td>&#8377; <%=products[i].product_price%></td>
+                                    <td> 
+                                        <% var number=products[i].product_price; 
+                                            var currency='INR' ; 
+                                            var formatter=new Intl.NumberFormat('en-IN', {
+                                                style: 'currency' , 
+                                                currency: currency, }); 
+                                                var formattedNumber=formatter.format(number); %>
+                                                <%=formattedNumber%>
+                                        </td>
                                     <td>
                                         <div class="input-group mb-3 d-flex align-items-center quantity-container"
                                             style="max-width: 120px;">
@@ -68,7 +76,14 @@
     
                                     </td>
                                     <td>&#8377; <span class="all_product_total" id="user_cart_total<%=products[i].cart_id%>"> 
-                                            <%=products[i].product_price * products[i].qty%> 
+                                            
+                                            <% const num=products[i].product_price * products[i].qty; 
+                                                const cur='INR' ; 
+                                                const formatted=new Intl.NumberFormat('en-IN', {
+                                                    style: 'currency' , 
+                                                    currency: cur, }); 
+                                                    var formattedNumber=formatted.format(num); %>
+                                                <%=formattedNumber%>
                                         </span>
                                     </td>
                                     <td><a href="/delete_from_cart/<%=products[i].cart_id%>" class="btn btn-black btn-sm"><i class="fa fa-remove" style="font-size:24px"></i></a></td>
@@ -91,18 +106,7 @@
                             </a>
                         </div>
                     </div>
-                    <!-- <div class="row">
-                        <div class="col-md-12">
-                            <label class="text-black h4" for="coupon">Coupon</label>
-                            <p>Enter your coupon code if you have one.</p>
-                        </div>
-                        <div class="col-md-8 mb-3 mb-md-0">
-                            <input type="text" class="form-control py-3" id="coupon" placeholder="Coupon Code">
-                        </div>
-                        <div class="col-md-4">
-                            <button class="btn btn-black">Apply Coupon</button>
-                        </div>
-                    </div> -->
+                    
                 </div>
                 <div class="col-md-6 pl-5">
                     <div class="row justify-content-end">
@@ -118,7 +122,19 @@
                                 </div>
                                 <div class="col-md-6 text-right">
                                     <strong class="text-black">
-                                        &#8377; <span id="sub_total"> <%=sub_total%> </span>
+                                         <span id="sub_total"> 
+                                            <% var number=sub_total; 
+                                                var currency='INR' ; 
+                                                var formatter=new Intl.NumberFormat('en-IN', {
+                                                    style: 'currency' , 
+                                                    currency: currency, 
+                                                    minimumFractionDigits: 0,
+                                                    maximumFractionDigits: 0,    
+                                                }); 
+                                                    var formattedNumber=formatter.format(number); 
+                                                    %>
+                                                    <%=formattedNumber%>
+                                         </span>
                                     </strong>
                                 </div>
                             </div>

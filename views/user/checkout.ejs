@@ -103,7 +103,19 @@
                                         %>    
                                         <tr>
                                             <td><%=cart_products[i].product_name%> <strong class="mx-2">x</strong> <%=cart_products[i].qty%></td>
-                                            <td>&#8377; <%=cart_products[i].product_price * cart_products[i].qty%></td>
+                                            <td>
+                                                <% var number=cart_products[i].product_price * cart_products[i].qty; 
+                                                var currency='INR' ; 
+                                                var formatter=new Intl.NumberFormat('en-IN', {
+                                                    style: 'currency' , 
+                                                    currency: currency, 
+                                                    minimumFractionDigits: 0,
+                                                    maximumFractionDigits: 0,    
+
+                                                }); 
+                                                    var formattedNumber=formatter.format(number); %>
+                                                    <%=formattedNumber%>
+                                                </td>
                                         </tr>
                                     <%}%>
                                    
@@ -116,7 +128,14 @@
                                     %>
                                     <tr>
                                         <td class="text-black font-weight-bold"><strong>Cart Subtotal</strong></td>
-                                        <td class="text-black">&#8377; <%=subtotal%></td>
+                                        <td class="text-black">
+                                            <% var number=subtotal; 
+                                                var currency='INR' ; 
+                                                var formatter=new Intl.NumberFormat('en-IN', {
+                                                    style: 'currency' , 
+                                                    currency: currency, }); 
+                                                    var formattedNumber=formatter.format(number); %>
+                                                    <%=formattedNumber%> </td>
                                     </tr>
 
                                     <tr>
@@ -133,7 +152,14 @@
                                     </tr>
                                     <tr>
                                         <td class="text-black font-weight-bold"><strong>Order Total</strong></td>
-                                        <td class="text-black font-weight-bold"><strong>&#8377; <%=total%> /-</strong></td>
+                                        <td class="text-black font-weight-bold"><strong> 
+                                            <% var number=total; 
+                                                var currency='INR' ; 
+                                                var formatter=new Intl.NumberFormat('en-IN', {
+                                                    style: 'currency' , 
+                                                    currency: currency, }); 
+                                                    var formattedNumber=formatter.format(number); %>
+                                                    <%=formattedNumber%> /-</strong></td>
                                     </tr>
                                 </tbody>
                             </table>

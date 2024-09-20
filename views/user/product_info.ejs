@@ -2,7 +2,7 @@
 
 
 <% if(product){
-    var imgs = product.product_image.split('~');
+    var imgs = product.product_image;
     var img = '';
     for(var j=0; j<imgs.length; j++){
         if(imgs[j] != ''){
@@ -69,7 +69,7 @@
 
                     <div class="row">
                         <dt class="col-3">Type : </dt>
-                        <dd class="col-9"><%= product.product_type_name %></dd>
+                        <dd class="col-9"><%= product.product_type_id.product_type_name %>  </dd>
 
                         <dt class="col-3">Color : </dt>
                         <dd class="col-9">
@@ -117,7 +117,7 @@
 
                     <% if(!in_cart)
                     {%>
-                    <a href="/add_to_card/<%=product.product_id%>" class="btn btn-primary shadow-0">
+                    <a href="/add_to_cart/<%=product.product_id%>" class="btn btn-primary shadow-0">
                          <i class="me-1 fa fa-shopping-basket"></i> Add to Cart
                     </a>
                     <%}else{%>

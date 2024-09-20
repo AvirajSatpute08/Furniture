@@ -1,407 +1,986 @@
-var express = require("express");
-var exe = require("./../connection");
-var url = require("url");
-var router = express.Router();
+const express = require('express');
+const router = express.Router();
+const Contact = require('../models/Contact');
+const bcrypt = require('bcryptjs');
+const mongoose = require('mongoose');
+const Service = require('../models/Service');
+const Blog = require('../models/Blog');
+const Newsletter = require('../models/Newsletter');
+const Product = require('../models/Product');
+const ProductType= require('../models/ProductType');
+const Order = require('../models/Order');
+const Banner = require('../models/Banner');
+const Product1 = require('../models/Product1');
+const User = require('../models/User');
+const ContactUs = require('../models/ContactUs');
+const Customer = require('../models/customer');
+const Admin = require('../models/admin');
+const UserCart = require('../models/UserCart');
+const OrderProduct = require('../models/OrderProduct'); 
+const Cart = require('../models/Cart'); 
+const jwt = require('jsonwebtoken');
+const jwtSecret = "thisismynewtoken";
+const connectToCollection = require('../connection');
+//const upload = require('../uploads');
+// const multer = require('multer');
+// const upload = multer({ dest: 'uploads/' });
+const upload = require('../middleware/multerConfig');
+const session = require('../middleware/sessionMiddleware');
+// const session = require('express-session');
 
-function checkLogin(req, res, next){
-    if(req.session.c_id != undefined){
-        next();
-    }else{
-        res.send("<script>alert('Please Login First'); location.href='/login' </script>");
-    } 
-}
+// app.use(session({
+//     secret: 'thisismynewtoken',  // Replace with a strong secret
+//     resave: false,
+//     saveUninitialized: true,
+//     cookie: { secure: false }  // Set to true if using HTTPS
+// }));
 
 
 
+//Home route
+router.get("/", async (req, res) => {
+    try {
+        // Fetch data from collections using Mongoose models
+        const banner_info = await Banner.find({});  // Assuming 'Service' model stores banner info
+        const wcu_info = await Service.find({});  // Assuming 'Service' model stores "Why Choose Us" info
+        const modern_interior = await Service.find({});  // Assuming 'Service' model stores modern interior info
+        const wcup = await Blog.find({}).sort({ wcup_id: -1 }).limit(4); // Assuming 'Blog' model stores WCUP points
+        const product = await Product.find({}).sort({ product_id: -1 }).limit(4);
+        const testimonial = await Contact.find({}).sort({ c_id: -1 }).limit(6);
 
-router.get("/", async(req, res)=>{
-    console.log(req.session);
-    var banner_info = await exe (`SELECT * FROM banner`);
-    var wcu_info = await exe(`SELECT * FROM why_choose_us`);
-    var modern_interior = await exe('SELECT * FROM modern_interior');
-    var wcup = await exe(`SELECT * FROM why_choose_us_point ORDER BY wcup_id DESC LIMIT 4`);
-    var product = await exe('SELECT * FROM product ORDER BY product_id DESC LIMIT 4');
-    var testimonial = await exe(`SELECT * FROM testimonial ORDER BY c_id DESC LIMIT 6`);
-    var obj = {
-        "banner_info":banner_info[0],
-        "wcu_info":wcu_info[0],
-        "modern_data":modern_interior[0],
-        "wcup":wcup,
-        "product":product,
-        "testimonial":testimonial,
-        "isLogin":((req.session.c_id)? true:false),
-    };
-    res.render("user/home.ejs", obj);
+        // Prepare data object to pass to view
+        const obj = {
+            "banner_info": banner_info[0],  // If fetching multiple, use the first one
+            "wcu_info": wcu_info[0],        // Same here
+            "modern_data": modern_interior[0],
+            "wcup": wcup,
+            "product": product,
+            "testimonial": testimonial,
+            "isLogin": req.session.c_id ? true : false, // Session check
+        };
+        
+        // Render home page with fetched data
+        res.render("user/home.ejs", obj);
+    } catch (err) {
+        console.error("Error fetching data:", err);
+        res.status(500).send("Error loading home page");
+    }
 });
 
-router.get("/login", (req, res)=>{
-    obj = {
-        "isLogin":((req.session.c_id) ? true : false ),
-    }
+// router.get("/", async (req, res) => {
+//     try {
+//         // Example of fetching data from MongoDB
+//         const bannerData = await Banner.find({}); // Assuming you have a Banner model
+//         res.render("user/home.ejs", { banner: bannerData }); // Pass data to EJS template
+//     } catch (err) {
+//         console.error("Error fetching data:", err);
+//         res.status(500).send("Error loading home page");
+//     }
+// });
+
+// Login route
+router.get("/login", (req, res) => {
+    const obj = { isLogin: req.session.c_id ? true : false };
     res.render("user/login.ejs", obj);
+  });
+
+router.get("/admin_login", (req, res) => {
+  const obj = { "isLogin": req.session.c_id ? true : false };
+  res.render("user/admin_login.ejs", obj);
 });
 
-router.get("/admin_login", (req, res)=>{
-    obj = {
-        "isLogin":((req.session.c_id)? true:false),
+// Admin login POST route
+// router.post("/admin_login", async (req, res) => {
+//     const { admin_mobile, admin_password } = req.body; // Get data from form
+  
+//     try {
+//       const adminCollection = await connectToCollection("admin"); // Connect to MongoDB collection
+  
+//       // Find admin in the database by mobile number and password
+//       const data = await adminCollection.findOne({ admin_mobile, admin_password });
+  
+//       if (data) {
+//         // If admin is found, create session
+//         req.session.admin_id = data.admin_id;
+//         req.session.admin_mobile = data.admin_mobile;
+  
+//         res.redirect("/admin"); // Redirect to admin dashboard after successful login
+//       } else {
+//         // Invalid credentials
+//         res.send("<script>alert('Invalid Credentials'); history.back(); </script>");
+//       }
+//     } catch (err) {
+//       console.error("Error during admin login:", err);
+//       res.status(500).send("Internal server error during admin login.");
+//     }
+//   });
+
+router.post("/admin_login", async (req, res) => {
+    const { admin_mobile, admin_password } = req.body; // Get data from form
+  
+    try {
+      // Find admin in the database by mobile number and password
+      const data = await Admin.findOne({ admin_mobile, admin_password });
+  
+      if (data) {
+        // If admin is found, create session
+        req.session.admin_id = data._id;
+        req.session.admin_mobile = data.admin_mobile;
+  
+        res.redirect("/admin"); // Redirect to admin dashboard after successful login
+      } else {
+        // Invalid credentials
+        res.send("<script>alert('Invalid Credentials'); history.back(); </script>");
+      }
+    } catch (err) {
+      console.error("Error during admin login:", err);
+      res.status(500).send("Internal server error during admin login.");
     }
-    res.render("user/admin_login.ejs", obj);
+  });
+  
+// User signup route
+router.get("/signup", (req, res) => {
+    const obj = { "isLogin": req.session.c_id ? true : false };
+    res.render("user/signup.ejs", obj);
 });
 
-router.post("/admin_login",async (req, res)=>{
-    var d = req.body;
-    var sql = `SELECT * FROM admin WHERE admin_mobile = '${d.admin_mobile}' AND admin_password = '${d.admin_password}'`;
+//Registration route
+router.post("/do_register", async (req, res) => {
+    const { c_name, c_email, c_mobile, c_password } = req.body;
+  
+    try {
+      // Check if user already exists with the provided email or mobile number
+      let user = await User.findOne({ c_email });
+      if (user) {
+        return res.status(400).send('Email already exists.');
+      }
+  
+      user = await User.findOne({ c_mobile });
+      if (user) {
+        return res.status(400).send('Mobile number already exists.');
+      }
+  
+      // Hash the password before saving
+      const hashedPassword = await bcrypt.hash(c_password, 10);
+  
+      // Create a new user
+      const newUser = new User({
+        c_name,
+        c_email,
+        c_mobile,
+        c_password: hashedPassword, // Store the hashed password
+      });
+  
+      // Save the new user
+      await newUser.save();
+  
+      // Set session data
+      req.session.c_id = newUser._id;
+      req.session.c_name = newUser.c_name;
+      req.session.c_email = newUser.c_email;
+      req.session.c_mobile = newUser.c_mobile;
+  
+      // Redirect to home or dashboard after successful registration
+      res.redirect("/");
+    } catch (error) {
+      console.error("Error during registration:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+
+
+  router.post("/do_login", async (req, res) => {
+    const { c_mobile, c_password } = req.body; // Get data from form
+  
+    try {
+      // Find user by mobile number
+      const user = await User.findOne({ c_mobile });
+      if (!user) {
+        return res.send("<script>alert('Invalid Credentials'); history.back(); </script>");
+      }
+  
+      // Compare the provided password with the stored hashed password
+    //   const isMatch = await bcrypt.compare(c_password, user.c_password);
+    //   if (!isMatch) {
+    //     return res.send("<script>alert('Invalid Credentials'); history.back(); </script>");
+    //   }
+  
+      // If password is correct, create session
+      req.session.c_id = user._id;
+      req.session.c_mobile = user.c_mobile;
+  
+      // Redirect to user dashboard or homepage after successful login
+      res.redirect("/");
+    } catch (err) {
+      console.error("Error during login:", err);
+      res.status(500).send("Internal server error during login.");
+    }
+  });
+// router.post("/do_login", async (req, res) => {
+//     const { c_mobile, c_password } = req.body;
+
+//     try {
+//         // Find user by mobile number
+//         const user = await User.findOne({ c_mobile });
+
+//         if (!user) {
+//             // User not found
+//             return res.status(400).send('Invalid mobile number or password');
+//         }
+
+//         // Check if password matches (ensure password hashing is handled)
+//         const isMatch = await bcrypt.compare(c_password, user.c_password);
+
+//         if (!isMatch) {
+//             // Password doesn't match
+//             return res.status(400).send('Invalid mobile number or password');
+//         }
+
+//         // Set session data
+//         req.session.c_id = user._id;
+//         req.session.c_mobile = user.c_mobile;
+
+//         // Redirect to homepage or dashboard
+//         res.redirect("/");
+//     } catch (error) {
+//         console.error("Error during login:", error);
+//         res.status(500).send("Internal Server Error");
+//     }
+// });
+
+// User login POST route
+// router.post('/do_login', async (req, res) => {
+//     const { c_mobile, c_password } = req.body;
+  
+//     try {
+//         const customerCollection = await connectToCollection("customer");
     
-    var data = await exe (sql); 
-    if(data.length > 0){
-        req.session.admin_id = data[0].admin_id;
-        res.redirect("/admin");
-    }else{ 
-        res.send("<script>alert('Invalid Credential'); history.back(); </script>")
-    }
-});
-
-router.get("/signup", (req, res)=>{
-    obj = {
-        "isLogin":((req.session.c_id)? true:false),
-    }
-    res.render("user/signup.ejs",obj);
-});
-
-router.post("/do_register",async (req, res)=>{
-    // var data= await exe( `CREATE TABLE customer(c_id INT PRIMARY KEY AUTO_INCREMENT, c_name VARCHAR(100), c_mobile VARCHAR(15), c_email VARCHAR(70), c_password VARCHAR(200))`);
-    var d = req.body;
-    var sql = `INSERT INTO customer (c_name, c_email, c_mobile, c_password) VALUES 
-            ('${d.c_name}', '${d.c_email}','${d.c_mobile}','${d.c_password}')`;
-    var data = await exe(sql);
-    res.redirect("/login");
-});
-
-// CREATE TABLE customer(c_id INT PRIMARY KEY AUTO_INCREMENT, c_name VARCHAR(100), c_mobile VARCHAR(15), c_email VARCHAR(70), c_password VARCHAR(200));
-
-
-router.post("/do_login",async (req, res)=>{
-    var d = req.body;
-    var sql = `SELECT * FROM customer WHERE c_mobile = '${d.c_mobile}' AND c_password = '${d.c_password}'`;
+//         // Check if user exists with mobile number and password
+//         const customer = await customerCollection.findOne({ c_mobile, c_password });
     
-    var data = await exe (sql); 
-    if(data.length > 0){
-        req.session.c_id = data[0].c_id;
-        res.redirect("/");
-    }else{ 
-        res.send("<script>alert('Invalid Credential'); history.back(); </script>")
+//         if (customer) {
+//             // If login is successful, set session variables
+//             req.session.c_id = customer.c_id;
+//             req.session.c_mobile = customer.c_mobile;
+    
+//             res.redirect('/');  // Redirect to home or dashboard after successful login
+//         } else {
+//             // If login fails, redirect back to login with an error message
+//             res.send("<script>alert('Invalid Mobile Number or Password'); window.location.href='/login';</script>");
+//         }
+//     } catch (err) {
+//         console.error("Login error:", err);
+//         res.status(500).send("Internal server error during login.");
+//     }
+// });
+
+  
+// router.post('/do_login', async (req, res) => {
+//     const { c_mobile, c_password } = req.body;
+
+//     try {
+//         const customerCollection = await connectToCollection("customer");
+
+//         // Check if user exists with mobile number
+//         const customer = await customerCollection.findOne({ c_mobile });
+
+//         if (customer) {
+//             // Optional: If using hashed passwords, compare with bcrypt
+//             const isMatch = await bcrypt.compare(c_password, customer.c_password);
+//             if (!isMatch) {
+//                 return res.send("<script>alert('Invalid Mobile Number or Password'); window.location.href='/login';</script>");
+//             }
+
+//             // Create a JWT token with user information
+//             const token = jwt.sign(
+//                 { c_id: customer.c_id, c_mobile: customer.c_mobile },  // Payload
+//                 jwtSecret,  // Secret key
+//                 { expiresIn: '1h' }  // Token expiration time
+//             );
+
+//             // Send the token to the client (can be sent in a cookie or as a response header)
+//             res.cookie('token', token, { httpOnly: true });  // You can use localStorage instead if preferred
+//             res.redirect('/');  // Redirect after successful login
+//         } else {
+//             // If login fails, redirect back to login with an error message
+//             res.send("<script>alert('Invalid Mobile Number or Password'); window.location.href='/login';</script>");
+//         }
+//     } catch (err) {
+//         console.error("Login error:", err);
+//         res.status(500).send("Internal server error during login.");
+//     }
+// });
+
+
+// Shop route with pagination
+// router.get("/shop", async (req, res) => {
+//     try {
+//       const productCollection = await connectToCollection("product"); // Connect to 'product' collection
+  
+//       const total_product = await productCollection.countDocuments(); // Count total products
+//       const per_page = 8; // Products per page
+//       const total_pages = Math.ceil(total_product / per_page); // Total pages
+//       const url_data = url.parse(req.url, true).query; // Parse URL to get query parameters
+//       const page_no = url_data.page_no ? parseInt(url_data.page_no) : 1; // Get page number from URL, default to 1
+//       const start = (page_no * per_page) - per_page; // Calculate the start index for pagination
+  
+//       // Fetch products for the current page
+//       const products = await productCollection.find().skip(start).limit(per_page).toArray();
+  
+//       // Object to pass to the EJS template
+//       const obj = {
+//         "isLogin": req.session.c_id ? true : false, // Check if user is logged in
+//         "products": products,
+//         "total_pages": total_pages,
+//         "page_no": page_no
+//       };
+  
+//       // Render shop page
+//       res.render("user/shop.ejs", obj);
+//     } catch (error) {
+//       console.error("Error fetching products:", error);
+//       res.status(500).send("Internal Server Error");
+//     }
+//   });
+
+
+router.get("/shop", async (req, res) => {
+    try {
+        const per_page = 8; // Products per page
+        const page_no = parseInt(req.query.page_no) || 1; // Get the page number from query params, default to 1 if not provided
+        const start = (page_no - 1) * per_page; // Calculate the starting index
+
+        // Count total products for pagination
+        const total_product = await Product.countDocuments();
+        const total_pages = Math.ceil(total_product / per_page); // Calculate total pages
+
+        // Fetch products for the current page, with pagination
+        const products = await Product.find()
+            .skip(start)
+            .limit(per_page);
+
+        // Object to pass to the EJS template
+        const obj = {
+            isLogin: req.session?.c_id ? true : false, // Check if user is logged in
+            products: products,
+            total_pages: total_pages,
+            page_no: page_no
+        };
+
+        // Render the shop page with the products and pagination info
+        res.render("user/shop.ejs", obj);
+    } catch (error) {
+        console.error("Error fetching products:", error);
+        res.status(500).send("Internal Server Error");
     }
 });
 
 
-router.get("/shop",async function (req, res){
-    var total_product = (await exe("SELECT COUNT(product_id) as total  FROM product"))[0].total;
-    var per_page = 8;
-    var total_pages = (parseInt(total_product / per_page) < total_product) ? parseInt(total_product/per_page)+1:parseInt(total_product/per_page);
-    var url_data = url.parse(req.url, true).query;
-    var page_no = 1;
-    if(url_data.page_no){
-        page_no = url_data.page_no;
+
+  router.get("/about", async function(req, res) {
+    try {
+        // Here, if you need to fetch some data from MongoDB for the About page, you can do so.
+
+        const obj = {
+            "isLogin": req.session.c_id ? true : false, // Pass session login status
+        };
+
+        res.render("user/about.ejs", obj); // Render the about page with data
+    } catch (error) {
+        console.error("Error connecting to the database:", error);
+        res.status(500).send("Internal Server Error");
     }
-    var start = (page_no * per_page)-per_page;
-    var products = await exe(`SELECT * FROM product LIMIT ${start}, ${per_page}`);
-    obj = {
-        "isLogin":((req.session.c_id)? true:false),
-        "products":products,
-        "total_pages":total_pages,
-        "page_no":page_no
-    };
-    res.render("user/shop.ejs", obj);
 });
 
-router.get("/about", function(req,res){
-    obj = {
-        "isLogin":((req.session.c_id)? true:false),
+
+router.get("/services", async function(req, res) {
+    try {
+        const services = await Service.find();  // Fetch all services from the database
+        const obj = {
+            isLogin: req.session.c_id ? true : false,
+            services: services
+        };
+        res.render("user/services.ejs", obj);  // Render the view and pass the service data
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
     }
-    res.render("user/about.ejs", obj);
 });
 
-router.get("/services", function(req, res){
-    obj = {
-        "isLogin":((req.session.c_id)? true:false),
+router.get("/blog", async function(req, res) {
+    try {
+        const blogs = await Blog.find();  // Fetch all blog posts from the database
+        const obj = {
+            isLogin: req.session.c_id ? true : false,
+            blogs: blogs
+        };
+        res.render("user/blog.ejs", obj);  // Render the view and pass the blog data
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
     }
-    res.render("user/services.ejs",obj);
 });
 
-router.get("/blog", function(req, res){
-    obj = {
-        "isLogin":((req.session.c_id)? true:false),
+router.post('/contact', async (req, res) => {
+    try {
+        // Create a new contact submission
+        const newContact = new Contact({
+            fname: req.body.fname,
+            lname: req.body.lname,
+            email: req.body.email,
+            message: req.body.message
+        });
+
+        // Save to the database
+        await newContact.save();
+
+        // Redirect to a success page or display a message
+        res.send("Message sent successfully!");
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server error");
     }
-    res.render("user/blog.ejs",obj);
 });
 
-router.get("/contact", function(req, res){
-    obj = {
-        "isLogin":((req.session.c_id)? true:false),
+// Contact Us Form
+router.post('/contactUs', async (req, res) => {
+    try {
+        // Create a new contact submission
+        const newContact = new Contact({
+            fname: req.body.fname,
+            lname: req.body.lname,
+            email: req.body.email,
+            message: req.body.message
+        });
+
+        // Save the contact information to the database
+        await newContact.save();
+
+        // Redirect to a success page or render a thank you message
+        res.redirect("/contact?success=true");
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server error");
     }
-    res.render("user/contactUs.ejs",obj);
 });
 
-router.post("/contactUs",async function(req, res){
-    var d= req.body;
-    var sql = (`CREATE TABLE contactUs (c_id INT PRIMARY KEY AUTO_INCREMENT, fname VARCHAR(50), lname VARCHAR(50), email VARCHAR(70), message TEXT)`);
-    var sql = (`INSERT INTO contactUs (fname, lname, email, message) VALUES ('${d.fname}','${d.lname}','${d.email}', '${d.message}')`);
-    var data = await exe(sql);
+
+
+// Newsletter Subscription
+router.post("/newsLetter", async (req, res) => {
+    const d = req.body;
+
+    // Create a new Newsletter document
+    const newNewsletter = new Newsletter({
+        name: d.name,
+        email: d.email
+    });
+
+    await newNewsletter.save();
     res.redirect("/contact");
 });
 
-router.post("/newsLetter", async(req, res)=>{
-    var d= req.body;
-    var sql = `CREATE TABLE newLetter(news_id INT PRIMARY KEY AUTO_INCREMENT, name VARCHAR(50), email VARCHAR(80))`;
-    var sql = `INSERT INTO newLetter(name, email) VALUES ('${d.name}', '${d.email}')`;
-    var data = await exe(sql);
-    res.redirect("/contact");
-})
 
 
-router.get("/product_info/:product_id", async function(req,res){
-    var product_id = req.params.product_id;
-    var product_details = await exe(`SELECT * FROM product, 
-    product_type WHERE product_type.product_type_id=product.product_type_id 
-    AND product_id = '${product_id}'`); 
-   
-    var user_id = req.session.c_id;
-    var checkCart = await exe(`SELECT * FROM user_cart WHERE 
-    user_id = '  ${user_id}' AND product_id = '${product_id}'`);
-        console.log(checkCart);
-    obj = {
-        "product":product_details[0],
-        "isLogin":((req.session.c_id) ? true:false),
-        "in_cart": ((checkCart.length > 0) ? true : false )
-    }
-    res.render("user/product_info.ejs", obj);
-});
+// router.get("/product_info/:id", async (req, res) => {
+//     const productId = req.params.id;
+
+//     // Validate ObjectId
+//     if (!mongoose.Types.ObjectId.isValid(productId)) {
+//         return res.status(400).send('Invalid Product ID');
+//     }
+
+//     try {
+//         const product = await Product.findById(productId);
+
+//         if (!product) {
+//             return res.status(404).send('Product not found');
+//         }
+
+//         res.render("user/product_info.ejs", { product });
+//     } catch (error) {
+//         console.error("Error fetching product info:", error);
+//         res.status(500).send('Internal Server Error');
+//     }
+// });
 
 
-router.get("/add_to_card/:product_id",checkLogin, async function (req, res){
-    user_id = req.session.c_id;
-    product_id = req.params.product_id
-    qty = 1;
-    if(user_id == undefined){
-        res.send(`<script>alert('Invalid User, Login Now...'); location.href = '/login';</script>`);
-    }else{
-        var sql = `SELECT * FROM user_cart WHERE user_id = '  ${user_id}' AND product_id = '${product_id}'`;
+router.get("/product_info/:product_id", async (req, res) => {
+    try {
+        const product_id = req.params.product_id;
 
-        var check = await exe(sql);
-        if(check.length == 0)
-        {
-                var sql2 = `INSERT INTO user_cart (user_id, product_id, qty)VALUES
-                ('${user_id}','${product_id}','${qty}')`;
-                var data = await exe(sql2);
+        // Fetch product details
+        const product_details = await Product.findById(product_id).populate('product_type_id').exec();
+
+        if (!product_details) {
+            return res.status(404).send("Product not found");
         }
-        res.redirect("/product_info/"+product_id);
+
+        const user_id = req.session?.c_id; // Optional: Get user_id from session if available
+
+        // Check if the product is in the user's cart
+        const checkCart = user_id ? await UserCart.findOne({ user_id, product_id }) : null;
+
+        const obj = {
+            product: product_details,
+            isLogin: user_id ? true : false,
+            in_cart: checkCart ? true : false
+        };
+
+        res.render("user/product_info.ejs", obj);
+    } catch (error) {
+        console.error("Error fetching product info:", error);
+        res.status(500).send("Internal Server Error");
     }
 });
 
 
-router.get("/cart",checkLogin, async function(req, res){
-    var user_id = req.session.c_id;
+// router.get("/product_info/:product_id", async (req, res) => {
+//     try {
+//         const product_id = req.params.product_id;
+//         console.log("Product ID:", product_id);  // Debugging
 
-    var cart_products = await exe( `SELECT * FROM user_cart, product WHERE 
-    product.product_id = user_cart.product_id AND user_id = '${user_id}'`)
-    obj = {
-        "isLogin":((req.session.c_id)? true:false),
-        "products":cart_products,
+//         // Validate if product_id is a valid ObjectId
+//         if (!mongoose.Types.ObjectId.isValid(product_id)) {
+//             return res.status(400).send("Invalid product ID");
+//         }
+
+//         // Fetch product details and populate the product_type
+//         const product_details = await Product.findById(product_id).populate('product_type_id').exec();
+//         console.log("Product Details:", product_details);  // Debugging
+
+//         if (!product_details) {
+//             return res.status(404).send("Product not found");
+//         }
+
+//         const user_id = req.session?.c_id;  // Optional: Get user_id from session if available
+//         console.log("User ID:", user_id);  // Debugging
+
+//         // Check if the product is in the user's cart
+//         const checkCart = user_id ? await UserCart.findOne({ user_id, product_id }) : null;
+
+//         const obj = {
+//             product: product_details,
+//             isLogin: user_id ? true : false,
+//             in_cart: checkCart ? true : false
+//         };
+
+//         // Render the product info page with product details
+//         res.render("user/product_info.ejs", obj);
+//     } catch (error) {
+//         console.error("Error fetching product info:", error);
+//         res.status(500).send("Internal Server Error");
+//     }
+// });
+
+
+
+router.get("/add_to_cart/:user_id/:product_id", async (req, res) => {
+    const user_id = req.params.user_id;  // Fetch user_id from request parameters
+    const product_id = req.params.product_id;
+    const qty = 1;
+
+    try {
+        // Check if the product is already in the user's cart
+        const cartItem = await UserCart.findOne({ user_id, product_id });
+
+        if (!cartItem) {
+            // Create a new cart item if it doesn't already exist
+            const newCartItem = new UserCart({ user_id, product_id, qty });
+            await newCartItem.save();
+        } else {
+            // If the item exists in the cart, increment the quantity
+            cartItem.qty += 1;
+            await cartItem.save();
+        }
+        res.redirect(`/product_info/${product_id}`);  // Redirect to product info page
+    } catch (error) {
+        console.error("Error while adding to cart:", error);
+        res.status(500).send("Server Error");
     }
-    res.render("user/cart.ejs",obj);    
 });
 
 
-router.get("/decrease_qty/:cart_id", checkLogin, async function (req,res){
-    var user_cart_id = req.params.cart_id;
-    var sql = `SELECT * FROM user_cart, product WHERE 
-    product.product_id = user_cart.product_id AND cart_id = '${user_cart_id}'`;
-    var data = await exe(sql);
-    var new_qty = data[0].qty - 1 ;
-    var price = data[0].product_price;
-    
-    if(new_qty > 0 ){
-        var total = new_qty * price ; 
-        var sql2 = `UPDATE user_cart SET qty = '${new_qty}' WHERE cart_id = '${user_cart_id}'`;
-        var data =await exe (sql2);
-        res.send({"new_qty":new_qty, "total":total});
-    }else{
-        var total = data[0] * price ; 
-        res.send({"new_qty":data[0].qty, "total":price});
+
+router.get("/cart", async function(req, res) {
+    const user_id = req.session.c_id;
+
+    try {
+        // Fetch products from the user's cart and populate the product details
+        const cart_products = await UserCart.find({ user_id })
+            .populate('product_id')
+            .exec();
+
+        let obj = {
+            "isLogin": req.session.c_id ? true : false,
+            "products": cart_products.map(cartItem => {
+                return {
+                    ...cartItem.product_id.toObject(),
+                    qty: cartItem.qty,
+                    cart_id: cartItem._id // for easier identification in the view
+                };
+            })
+        };
+
+        res.render("user/cart.ejs", obj);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Server Error');
     }
 });
 
 
-router.get("/increase_qty/:cart_id",checkLogin, async function (req, res){
-    var user_cart_id = req.params.cart_id;
-    var data = await exe(`UPDATE user_cart SET qty = qty+1 WHERE cart_id = '${user_cart_id}'`);
-    var sql = `SELECT * FROM user_cart, product WHERE product.product_id = user_cart.product_id AND cart_id = '${user_cart_id}'`;
-    var data = await exe(sql);
-    var new_qty = data[0].qty;
-    console.log(new_qty);
-    var price = data[0].product_price;
-    var total = new_qty * price;
-    res.send({"new_qty":new_qty, "total":total});
 
+// Route to decrease the quantity of a product in the cart
+router.get('/decrease_qty/:cart_id',async function (req, res) {
+    const cart_id = req.params.cart_id;
+
+    try {
+        const cartItem = await UserCart.findById(cart_id);
+
+        if (cartItem && cartItem.qty > 1) {
+            cartItem.qty -= 1;
+            await cartItem.save();
+
+            const product = await Product.findById(cartItem.product_id);
+            const total = cartItem.qty * product.product_price;
+
+            res.json({ new_qty: cartItem.qty, total });
+        } else {
+            res.status(400).json({ error: 'Cannot decrease quantity below 1' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Server Error');
+    }
 });
 
-router.get("/delete_from_cart/:id",checkLogin, async(req, res)=>{
-    var sql = `DELETE FROM user_cart WHERE cart_id = '${req.params.id}'`;
-    var data = await exe(sql);
+// Route to increase the quantity of a product in the cart
+router.get('/increase_qty/:cart_id', async function (req, res) {
+    const cart_id = req.params.cart_id;
+
+    try {
+        const cartItem = await UserCart.findById(cart_id);
+
+        if (cartItem) {
+            cartItem.qty += 1;
+            await cartItem.save();
+
+            const product = await Product.findById(cartItem.product_id);
+            const total = cartItem.qty * product.product_price;
+
+            res.json({ new_qty: cartItem.qty, total });
+        } else {
+            res.status(404).json({ error: 'Cart item not found' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Server Error');
+    }
+});
+
+
+router.get("/delete_from_cart/:id",async function(req, res){
+    const cart_id = req.params.id;
+
+    // Delete the cart item
+    await UserCart.findByIdAndDelete(cart_id);
+
     res.redirect("/cart");
 });
 
-router.get("/checkout", checkLogin, async(req, res)=>{
 
-    var cart_products = await exe(`SELECT * FROM user_cart, product WHERE product.product_id = 
-                                    user_cart.product_id AND user_cart.user_id = '${req.session.c_id}'`);
-    
+router.get("/checkout",async (req, res) => {
+    const user_id = req.session.c_id;
 
-    obj = {
-        "cart_products":cart_products,
-        "isLogin":((req.session.c_id)? true:false),
+    try {
+        // Fetch user's cart products and populate product details
+        const cart_products = await UserCart.find({ user_id }).populate('product').exec();
+
+        const obj = {
+            "cart_products": cart_products,
+            "isLogin": req.session.c_id ? true : false
+        };
+
+        res.render("user/checkout.ejs", obj);
+    } catch (error) {
+        console.error("Error fetching cart products:", error);
+        res.status(500).send("Internal Server Error");
     }
-    res.render("user/checkout.ejs",obj); 
 });
 
 
-router.post("/place_order",checkLogin, async(req, res)=>
-{
-    req.body.order_date = String(new Date().toISOString()).slice(0, 10);
-    var d=req.body;
-    var order_status = 'pending';
-    if(d.payment_mode == 'online'){
-        order_status = 'payment_pending';
+// Place Order
+router.post("/place_order", async (req, res) => {
+    try {
+        req.body.order_date = new Date().toISOString().slice(0, 10);
+        let d = req.body;
+        let order_status = 'pending';
+
+        if (d.payment_mode === 'online') {
+            order_status = 'payment_pending';
+        }
+
+        // Create the new order
+        const newOrder = new Order({
+            user_id: req.session.c_id,
+            country: d.c_country,
+            c_fname: d.c_fname,
+            c_lname: d.c_lname,
+            c_address: d.c_address,
+            c_area: d.c_area,
+            c_state: d.c_state,
+            c_postal_zip: d.c_postal_zip,
+            c_email: d.c_email,
+            c_phone: d.c_phone,
+            payment_mode: d.payment_mode,
+            order_date: d.order_date,
+            order_status: order_status,
+            payment_status: 'pending',
+        });
+
+        const savedOrder = await newOrder.save();
+
+        // Fetch user's cart items
+        const cart_products = await Cart.find({ user_id: req.session.c_id });
+
+        for (let product of cart_products) {
+            let orderProduct = new OrderProduct({
+                order_id: savedOrder._id,
+                user_id: req.session.c_id,
+                product_id: product.product_id,
+                product_qty: product.qty,
+                product_price: product.product_price,
+                product_name: product.product_name,
+                product_details: product.product_details,
+            });
+
+            await orderProduct.save();
+        }
+
+        // Optionally, clear the cart after placing the order
+        await Cart.deleteMany({ user_id: req.session.c_id });
+
+        res.status(200).send("Order placed successfully");
+    } catch (error) {
+        console.error("Error placing order:", error);
+        res.status(500).send("Internal Server Error");
     }
-    var sql = `INSERT INTO order_tbl(user_id, country, c_fname, c_lname, 
-        c_address, c_area, c_state, c_postal_zip, c_email, c_phone, payment_mode, 
-        order_date, order_status, payment_status) VALUES
-        ('${req.session.c_id}','${d.c_country}','${d.c_fname}','${d.c_lname}',
-            '${d.c_address}','${d.c_area}','${d.c_state}','${d.c_postal_zip}','${d.c_email}',
-            '${d.c_phone}','${d.payment_mode}','${d.order_date}','${order_status}','pending' )`;
-    
-    var data = await exe(sql);
+});
 
-    var cart_products = await exe(`SELECT * FROM user_cart, product WHERE product.product_id = 
-                                    user_cart.product_id AND user_cart.user_id = '${req.session.c_id}'`);
-
-    for(var i=0; i<cart_products.length; i++){
-       let order_id = data.insertId;
-       let user_id = req.session.c_id;
-       let product_id = cart_products[i].product_id;
-       let product_qty = cart_products[i].qty;
-       let product_price = cart_products[i].product_price;
-       let product_name = cart_products[i].product_name;
-       let product_details = cart_products[i].product_details;
-
-        sql = `INSERT INTO order_product(order_id, user_id, product_id, product_qty,product_price, product_name, product_details) 
-        VALUES ('${order_id}','${user_id}','${product_id}','${product_qty}','${product_price}','${product_name}','${product_details}')`;
-        var records = await exe(sql);
-        console.log(records);
+router.get("/pay_payment/:order_id", async (req, res) => {
+    try {
+        // Fetch order products details by order_id
+        const orderDetails = await OrderProduct.find({ order_id: req.params.order_id });
         
-    }
-    var sql = `DELETE FROM user_cart WHERE user_id = '${req.session.c_id}'`;
-    await exe(sql);
-    if(order_status == 'payment_pending'){
-        res.redirect("/pay_payment/"+data.insertId);
-        // res.send(data)
-    }else{
-        res.redirect("/my_orders/");
+        // Calculate subtotal
+        let subtotal = 0;
+        orderDetails.forEach(product => {
+            subtotal += product.product_price * product.product_qty;
+        });
+        
+        // Calculate discount and GST
+        const discount = Number(subtotal * 0.2).toFixed(0);
+        const gst = Math.ceil((subtotal - discount) * 0.12);
+        const total = Math.ceil(subtotal - discount + gst);
+        
+        // Pass details to EJS template
+        const obj = {
+            "order_id": req.params.order_id,
+            "order_details": orderDetails[0], // assuming there's only one unique order_id in the orderDetails array
+            "total": total,
+        };
+        
+        res.render("user/pay_payment.ejs", obj);
+    } catch (error) {
+        console.error("Error fetching order details:", error);
+        res.status(500).send("Internal Server Error");
     }
 });
 
-router.get("/pay_payment/:order_id",checkLogin, async function(req, res){
 
-    var order_details =await exe( `SELECT * FROM order_tbl, order_product WHERE order_product.order_id = order_tbl.order_id AND order_tbl.order_id = '${req.params.order_id}'`);
-        var subtotal=0; 
-        for(var i=0; i<order_details.length;i++){ 
-            subtotal +=(order_details[i].product_price * order_details[i].product_qty) 
+router.post("/payment_success/:order_id", async (req, res) => {
+    try {
+        const order_id = req.params.order_id;
+        const transaction_id = req.body.razorpay_payment_id;
+        const today = new Date().toISOString().slice(0, 10);
+
+        await Order.findByIdAndUpdate(order_id, {
+            order_status: 'completed', // Update status to completed or as needed
+            payment_status: 'complete',
+            transaction_id: transaction_id,
+            payment_date: today,
+        });
+
+        res.redirect("/my_orders");
+    } catch (error) {
+        console.error("Error processing payment success:", error);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
+
+router.get("/my_orders", async (req, res) => {
+    try {
+        // Fetch all orders for the logged-in user, except those with 'payment_pending'
+        const orders = await Order.find({ user_id: req.session.c_id, order_status: { $ne: 'payment_pending' } });
+
+        // Calculate total amount for each order by summing the price * quantity of each product
+        for (let order of orders) {
+            const orderProducts = await OrderProduct.find({ order_id: order._id });
+            
+            // Calculate total amount for the order
+            let total_amt = 0;
+            for (let product of orderProducts) {
+                total_amt += product.product_price * product.product_qty;
+            }
+            
+            // Add total amount to the order object
+            order.total_amt = total_amt;
         }
-            var discount=Number(subtotal * 0.2).toFixed(); 
-            var gst=Math.ceil(((subtotal - discount) * 0.12)); 
-            var total=Math.ceil((subtotal - discount + Number(gst))); 
 
-        var obj = {
-            "order_id":req.params.order_id, 
-            "order_details":order_details[0],
-            "total":total
+        const obj = {
+            "isLogin": req.session.c_id ? true : false,
+            "orders": orders,
+        };
+
+        // Render the my_orders.ejs template and pass the orders with total amounts
+        res.render("user/my_orders.ejs", obj);
+    } catch (error) {
+        console.error("Error fetching orders:", error);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
+
+
+router.get("/print_order/:id", async (req, res) => {
+    const orderId = req.params.id;
+
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+        return res.status(400).send('Invalid Order ID');
+    }
+
+    try {
+        const order_products = await OrderProduct.find({ order_id: orderId });
+        const order_details = await Order.findById(orderId);
+
+        // Calculate subtotal
+        let subtotal = 0;
+        for (let product of order_products) {
+            subtotal += product.product_price * product.product_qty;
         }
 
-    res.render("user/pay_payment.ejs",obj); 
-});
+        // Calculate discount (20%)
+        const discount = Number(subtotal * 0.2).toFixed(2);
 
-router.post("/payment_success/:order_id", checkLogin,async function(req, res){
-    var order_id = req.params.order_id;
-    var transaction_id = req.body.razorpay_payment_id;
-    var today = new Date().toISOString().slice(0,10);
+        // Calculate GST (12%)
+        const gst = Number((subtotal - discount) * 0.12).toFixed(2);
 
-    var sql = `UPDATE order_tbl SET order_status = 'pending', payment_status = 'complete',
-    transaction_id ='${transaction_id}',payment_date = '${today}' WHERE order_id = '${order_id}'`;
-    var data = await exe(sql);
-    res.redirect("/my_orders");
-});
+        // Calculate total
+        const total = (subtotal - discount + Number(gst)).toFixed(2);
 
-router.get("/my_orders",checkLogin, async function (req, res){
-    var sql = `SELECT *, (SELECT SUM(product_qty* product_price) FROM order_product 
-                WHERE order_product.order_id = order_tbl.order_id) AS total_amt FROM
-                order_tbl WHERE user_id = '${req.session.c_id}' AND order_status != 'payment_pending'`;
-    var orders = await exe(sql);
-    var obj  = {
-        "isLogin":((req.session.c_id)? true:false),
-        "orders":orders
+        const obj = {
+            "order_products": order_products,
+            "order_details": order_details,
+            "subtotal": subtotal,
+            "discount": discount,
+            "gst": gst,
+            "total": total,
+            "isLogin": req.session.c_id ? true : false,
+        };
+
+        res.render("user/print_order.ejs", obj);
+    } catch (error) {
+        console.error("Error fetching order:", error);
+        res.status(500).send('Internal Server Error');
     }
-    res.render("user/my_orders.ejs", obj);
 });
 
-router.get("/print_order/:id",checkLogin, async function(req, res){
-    var order_products =await exe(`SELECT * FROM order_product WHERE order_id = '${req.params.id}'`);
-    var order_details = await exe(`SELECT * FROM order_tbl WHERE order_id = '${req.params.id}'`);
 
-    var obj  = {
-        "order_products":order_products,
-        "order_details":order_details,
-        "isLogin":((req.session.c_id)? true:false),
+router.get("/profile", async (req, res) => {
+    if (!req.session.c_id) {
+        return res.redirect("/login");  // Redirect to login if session ID is not set
     }
-    res.render("user/print_order.ejs",obj);
-});
 
-router.get("/profile",checkLogin, async function (req, res){
-    var userData = await exe(`SELECT * FROM customer WHERE c_id = '${req.session.c_id}'`);
-    var obj  = {
-        "isLogin":((req.session.c_id)? true:false),
-        "user":userData
-    }
-    res.render("user/profile_page.ejs",obj)
-});
-
-
-router.get("/edit_profile", checkLogin, async function(req, res){
-    var userData = await exe(`SELECT * FROM customer WHERE c_id = '${req.session.c_id}'`);
-    var obj  = {
-        "isLogin":((req.session.c_id)? true:false),
-        "user":userData
-    }
-    res.render("user/edit_profile.ejs",obj);    
-});
-
-router.post("/update_profile", checkLogin, async(req, res)=>{
-    var d=req.body;
-    await exe(`UPDATE customer SET c_name = '${d.c_name}', c_email = '${d.c_email}',c_mobile = '${d.c_mobile}' WHERE c_id = '${req.session.c_id}'`);
-    res.redirect("/profile");
-});
-
-router.get("/logout",checkLogin, async(req, res)=>{
-        if (req.session) {
-            req.session.destroy();
+    try {
+        const user = await User.findById(req.session.c_id); // Fetch user by session ID
+        if (!user) {
+            console.error("User not found with ID:", req.session.c_id);  // Debug log if user not found
+            return res.status(404).send("User not found");
         }
-            res.redirect("/");  
+
+        const obj = {
+            isLogin: !!req.session.c_id,  // Check if the user is logged in
+            user: user,  // Pass user data to the view
+        };
+
+        res.render("user/profile_page.ejs", obj);  // Render profile page with user data
+    } catch (error) {
+        console.error("Error fetching user:", error);
+        res.status(500).send("Server error");
+    }
 });
+
+
+
+router.get("/edit_profile", async (req, res) => {
+    try {
+        const user = await User.findById(req.session.c_id); // Fetch user by session ID
+        if (!user) {
+            return res.status(404).send("User not found");
+        }
+
+        const obj = {
+            isLogin: !!req.session.c_id,  // Ensure logged in status
+            user: user,  // Pass user object to the view
+        };
+
+        res.render("user/edit_profile.ejs", obj);  // Render the edit profile page with user data
+    } catch (error) {
+        console.error("Error fetching user:", error);
+        res.status(500).send("Server error");
+    }
+});
+
+
+
+router.post("/update_profile", async (req, res) => {
+    try {
+        const d = req.body;
+
+        await User.findByIdAndUpdate(req.session.c_id, {
+            c_name: d.c_name,
+            c_email: d.c_email,
+            c_mobile: d.c_mobile,
+        });
+
+        res.redirect("/profile");
+    } catch (error) {
+        console.error("Error updating profile:", error);
+        res.status(500).send("Server error");
+    }
+});
+
+
+router.get("/logout", (req, res) => {
+    if (req.session) {
+        req.session.destroy(err => {
+            if (err) {
+                console.error("Error destroying session:", err);
+                return res.status(500).send("Server error");
+            }
+            res.redirect("/");
+        });
+    } else {
+        res.redirect("/");
+    }
+});
+
 
 
 
 module.exports = router;
 
-    // CREATE TABLE order_tbl (order_id INT PRIMARY KEY AUTO_INCREMENT,
-    // country VARCHAR(50), c_fname VARCHAR(50), c_lname VARCHAR(50), 
-    // c_address TEXT, c_area TEXT, c_state VARCHAR(50), c_postal_zip VARCHAR(50),
-    // c_email VARCHAR(100), c_phone VARCHAR(15), payment_mode VARCHAR(8), order_date VARCHAR(20));
+   

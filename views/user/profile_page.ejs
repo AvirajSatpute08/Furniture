@@ -34,15 +34,15 @@
                     <!-- <img src="profile-picture.jpg" alt="Profile Picture" class="img-fluid rounded-circle"> -->
                 </div>
                 <div class="col-md-9">
-                    <h3 class="card-title"><%=user[0].c_name%></h3>
+                    <h3 class="card-title"><%= user.c_name %></h3>
                     <p class="card-text">Web Developer</p>
-                    <p class="card-text">Email : <%=user[0].c_email%></p>
-                    <p class="card-text">Phone: <%=user[0].c_mobile%></p>
+                    <p class="card-text">Email : <%= user.c_email %></p>
+                    <p class="card-text">Phone: <%= user.c_mobile %></p>
                     <a href="/edit_profile" class="btn btn-primary">Edit Profile</a>
-                    <a href="/logout"><button class="btn btn-secondary">Logout </button></a>
-                    <a href="/my_orders"><button class="btn btn-success">My Orders </button></a>
-
+                    <a href="/logout"><button class="btn btn-secondary">Logout</button></a>
+                    <a href="/my_orders"><button class="btn btn-success">My Orders</button></a>
                 </div>
+                
             </div>
         </div>
     </div>

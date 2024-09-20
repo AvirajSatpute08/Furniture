@@ -7,26 +7,26 @@
             <div class="col-lg-5">
                 <div class="intro-excerpt">
                     <h1 class="burn">
-                        <%=banner_info.banner_title%> 
+                        <%= banner_info && banner_info.banner_title ? banner_info.banner_title : 'Default Title' %>
                     </h1>
                     <p class="mb-4">
-                        <%=banner_info.banner_details%>
+                        <%= banner_info && banner_info.banner_details ? banner_info.banner_details : 'Default details' %>
                     </p>
-                    <p><a href="/shop" target="_blank" class="btn btn-secondary me-2">Shop Now</a>
-                        <a href="/shop"
-                            class="btn btn-white-outline">Explore</a>
+                    <p>
+                        <a href="/shop" class="btn btn-secondary me-2">Shop Now</a>
+                        <a href="/shop" class="btn btn-white-outline">Explore</a>
                     </p>
                 </div>
             </div>
             <div class="col-lg-7">
                 <div class="hero-img-wrap">
-                    <img src="/uploads/<%=banner_info.banner_image%>" class="img-fluid" alt="">
-                    <!-- <img src="images/couch.png" class="img-fluid"> -->
+                    <img src="/uploads/<%= banner_info && banner_info.banner_image ? banner_info.banner_image : 'default.jpg' %>" class="img-fluid" alt="">
                 </div>
             </div>
         </div>
     </div>
 </div>
+
 <!-- End Hero Section -->
 
 <!-- Start Product Section -->
@@ -35,28 +35,45 @@
         <div class="row">
             <!-- Start Column 2 -->
             
-            <% for(let i=0; i<product.length; i++){
-                var imgs = product[i].product_image.split("~");
-                    var img = "";
-                    for (var j =0; j<imgs.length;j++){
-                        if(imgs[j] != ''){
+            <% for(let i = 0; i < product.length; i++) {
+                const productImages = product[i].product_image;
+                if (typeof productImages === 'string') {
+                    const imgs = productImages.split("~");
+                    let img = "";
+                    for (let j = 0; j < imgs.length; j++) {
+                        if (imgs[j] !== '') {
                             img = imgs[j];
                             break;
                         }
                     }
-                %>
+                } else {
+                    // Handle the case where product_image is not a string
+                    var img = ""; // Default image or placeholder
+                }
+            %>
             <div class="col-12 col-md-4 col-lg-3 mb-5 mb-md-0">
-                <a class="product-item" href="/product_info/<%=product[i].product_id%>">
-                    <img src="/uploads/<%=img%>" class="img-fluid product-thumbnail">
-                    <h3 class="product-title"><%=product[i].product_name%></h3>
-                    <strong class="product-price">&#8377 <%=product[i].product_price%></strong>
-
+                <a class="product-item" href="/product_info/<%= product[i].product_id %>">
+                    <img src="/uploads/<%= img %>" class="img-fluid product-thumbnail">
+                    <h3 class="product-title"><%= product[i].product_name %></h3>
+                    <strong class="product-price">
+                        <% const number = product[i].product_price; 
+                            const currency = 'INR'; 
+                            const formatter = new Intl.NumberFormat('en-IN', {
+                                style: 'currency', 
+                                currency: currency, 
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0,
+                            }); 
+                            const formattedNumber = formatter.format(number); %>
+                        <%= formattedNumber %>
+                    </strong>
                     <span class="icon-cross">
                         <img src="images/cross.svg" class="img-fluid">
                     </span>
                 </a>
             </div>
-            <%}%>
+            <% } %>
+            
             <!-- End Column 2 -->
         </div>
     </div>
@@ -68,34 +85,36 @@
     <div class="container">
         <div class="row justify-content-between">
             <div class="col-lg-6">
-                <h2 class="section-title"><%=wcu_info.wcu_heading%></h2>
-                <p><%=wcu_info.wcu_details%></p>
-                <div class="row my-5">
-                    <% for(let i=0; i<wcup.length; i++){%> 
-                    <div class="col-6 col-md-6">
-                        <div class="feature">
-                            <div class="icon">
-                                <img src="/uploads/<%=wcup[i].wcup_image%>" alt="Image" class="imf-fluid">
+                <% if (wcu_info && wcu_info.wcu_heading) { %>
+                    <h2 class="section-title"><%= wcu_info.wcu_heading %></h2>
+                    <p><%= wcu_info.wcu_details %></p>
+                    <div class="row my-5">
+                        <% for(let i = 0; i < wcup.length; i++) { %> 
+                        <div class="col-6 col-md-6">
+                            <div class="feature">
+                                <div class="icon">
+                                    <img src="/uploads/<%= wcup[i].wcup_image %>" alt="Image" class="img-fluid">
+                                </div>
+                                <h3><%= wcup[i].wcup_name %></h3>
+                                <p><%= wcup[i].wcup_details %></p>
                             </div>
-                            <h3><%=wcup[i].wcup_name%></h3>
-                            <p><%=wcup[i].wcup_details%></p>
                         </div>
+                        <% } %>
                     </div>
-
-                    <%}%>
-
-                </div>
+                <% } else { %>
+                    <p>No information available.</p>
+                <% } %>
             </div>
             <div class="col-lg-5">
                 <div class="img-wrap">
                     <img src="images/why-choose-us-img.jpg" alt="Image" class="img-fluid">
                 </div>
             </div>
-
         </div>
     </div>
 </div>
 <!-- End Why Choose Us Section -->
+
 
 <!-- Start We Help Section -->
 <div class="we-help-section">
@@ -103,28 +122,36 @@
         <div class="row justify-content-between">
             <div class="col-lg-7 mb-5 mb-lg-0">
                 <div class="imgs-grid">
-                    <div class="grid grid-1"><img src="/uploads/<%=modern_data.image1%>" alt="Untree.co"></div>
-                    <div class="grid grid-2"><img src="/uploads/<%=modern_data.image2%>" alt="Untree.co"></div>
-                    <div class="grid grid-3"><img src="/uploads/<%=modern_data.image3%>" alt="Untree.co"></div>
+                    <% if (modern_data && modern_data.image1) { %>
+                        <div class="grid grid-1"><img src="/uploads/<%= modern_data.image1 %>" alt="Untree.co"></div>
+                        <div class="grid grid-2"><img src="/uploads/<%= modern_data.image2 %>" alt="Untree.co"></div>
+                        <div class="grid grid-3"><img src="/uploads/<%= modern_data.image3 %>" alt="Untree.co"></div>
+                    <% } else { %>
+                        <p>No images available.</p>
+                    <% } %>
                 </div>
             </div>
             <div class="col-lg-5 ps-lg-5">
-                <h2 class="section-title mb-4"><%=modern_data.heading%></h2>
-                <p><%=modern_data.details%></p>
+                <% if (modern_data && modern_data.heading) { %>
+                    <h2 class="section-title mb-4"><%= modern_data.heading %></h2>
+                    <p><%= modern_data.details %></p>
+                <% } else { %>
+                    <h2 class="section-title mb-4">Default Heading</h2>
+                    <p>No details available.</p>
+                <% } %>
 
                 <ul class="list-unstyled custom-list my-4">
-                    <li>
-                        <%=modern_data.key_point1%>
-                    </li>
-                    <li>
-                        <%=modern_data.key_point2%>
-                    </li>
-                    <li>
-                        <%=modern_data.key_point3%>
-                    </li>
-                    <li>
-                        <%=modern_data.key_point4%>
-                    </li>
+                    <% if (modern_data) { %>
+                        <li><%= modern_data.key_point1 %></li>
+                        <li><%= modern_data.key_point2 %></li>
+                        <li><%= modern_data.key_point3 %></li>
+                        <li><%= modern_data.key_point4 %></li>
+                    <% } else { %>
+                        <li>Default Key Point 1</li>
+                        <li>Default Key Point 2</li>
+                        <li>Default Key Point 3</li>
+                        <li>Default Key Point 4</li>
+                    <% } %>
                 </ul>
                 <p><a href="/shop" class="btn">Explore</a></p>
             </div>
@@ -133,38 +160,58 @@
 </div>
 <!-- End We Help Section -->
 
+
 <!-- Start Popular Product -->
 <div class="popular-product">
     <div class="container">
         <div class="row">
 
-            <% for(let i=0; i<3; i++){
-                 var imgs = product[i].product_image.split("~");
-                    var img = "";
-                    for (var j =0; j<imgs.length;j++){
-                        if(imgs[j] != ''){
+            <% for (let i = 0; i < 3; i++) {
+                if (product[i] && product[i].product_image) {
+                    const productItem = product[i];
+                    const productImage = productItem.product_image || '';
+                    const imgs = typeof productImage === 'string' ? productImage.split("~") : [];
+                    let img = '';
+                    for (let j = 0; j < imgs.length; j++) {
+                        if (imgs[j].trim() !== '') {
                             img = imgs[j];
                             break;
                         }
                     }
-                %>
+            %>
             <div class="col-12 col-md-6 col-lg-4 mb-4 mb-lg-0">
                 <div class="product-item-sm d-flex">
                     <div class="thumbnail">
-                        <img src="/uploads/<%=img%>" alt="Image" class="img-fluid">
+                        <img src="/uploads/<%= img %>" alt="Image" class="img-fluid">
                     </div>
                     <div class="pt-3">
-                        <h3><%=product[i].product_name%></h3>
-                        <p><%=product[i].product_details%> </p>
+                        <h3><%= productItem.product_name %></h3>
+                        <p><%= productItem.product_details %></p>
+                        <p><a href="/shop">Read More</a></p>
+                    </div>
+                </div>
+            </div>
+            <% } else { %>
+            <!-- Optional: Handle cases where product data is missing -->
+            <div class="col-12 col-md-6 col-lg-4 mb-4 mb-lg-0">
+                <div class="product-item-sm d-flex">
+                    <div class="thumbnail">
+                        <img src="/uploads/default.jpg" alt="Image" class="img-fluid">
+                    </div>
+                    <div class="pt-3">
+                        <h3>Product Not Available</h3>
+                        <p>Details are not available</p>
                         <p><a href="/shop">Read More</a></p>
                     </div>
                 </div>
             </div>
             <% } %>
+            <% } %>
         </div>
     </div>
 </div>
 <!-- End Popular Product -->
+
 
 <!-- Start Testimonial Slider -->
 <div class="testimonial-section">

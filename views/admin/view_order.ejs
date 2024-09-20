@@ -62,7 +62,7 @@
 
                             <th class="right">Product Price</th>
                             <th class="center">Qty</th>
-                            <th>Order Status </th>
+                            <th>Payment Status </th>
                             <th class="right">Total</th>
                         </tr>
                     </thead>
@@ -71,6 +71,7 @@
                         <% 
                             var subtotal = 0;
                             for(var i=0; i<products.length; i++){
+                                for(let j = 0; j<order_info.length; j++){
 
                             var subtotal =  subtotal + (products[i].product_price * products[i].product_qty);
 
@@ -100,12 +101,15 @@
                                 <td class="center">
                                     <%=products[i].product_qty%>
                                 </td>
-                                <td><%order_info[i].payment_status%></td>
+                                <td>
+                                        <%=order_info[j].payment_status%>
+                                </td>
                                 <td class="right">&#8377; <%= products[i].product_price * products[i].product_qty %>
                                 </td>
                             </tr>
 
-                            <%}%>
+                            <%}
+                        }%>
                             
 
                     </tbody>
@@ -121,12 +125,6 @@
                         </a>
                     </div>
                     <%}else if((order_info[0].order_status) == 'dispatch'){%>
-                    <div class="col-md-3">
-                        <a href="/admin/shipping_order/<%=order_info[0].order_id%>">
-                            <button class="btn btn-primary">Transfer To Shipped</button>
-                        </a>
-                    </div>
-                    <%}else if((order_info[0].order_status) == 'shipped'){%>
                     <div class="col-md-3">
                         <a href="/admin/delivered_order/<%=order_info[0].order_id%>">
                             <button class="btn btn-primary">Transfer To Delivered</button>

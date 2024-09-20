@@ -1,6 +1,5 @@
 <%- include("navbar.ejs") %>
 
-
 <div class="container-fluid bg-white p-4">
     <div class="row">
         <div class="col-md-12">
@@ -12,50 +11,57 @@
         </div>
         <div class="col-md-12">
             <table class="table table-bordered table-striped table-sm">
-                <tr>
-                    <th>Action</th>
-                    <th>Sr No.</th>
-                    <th>Product Type</th>
-                    <th>Product Name</th>
-                    <th>Product Price</th>
-                    <th>Product Size</th>
-                    <th>Product Color</th>
-                </tr>
-                <% for(var i=0; i<products.length;i++){
-                    %>
+                <thead>
                     <tr>
-                        <td>
-                            <a href="/admin/edit_product/<%=products[i].product_id%>">
-                                <button class="btn btn-success"><i class="fa fa-edit" style="font-size:24px"></i></button>
-                            </a>
-                            <a href="/admin/delete_product/<%=products[i].product_id%>">
-                                <button class="btn btn-danger"><i class="fa fa-trash-o" style="font-size:24px"></i></button>
-                            </a>
-                        </td>
-                        <td><%=i+1%></td>
-                        <td>
-                            <%=products[i].product_type_name%>
-                        </td>
-                        <td>
-                            <%=products[i].product_name%>
-                        </td>
-                        <td>
-                            &#8377 <%=products[i].product_price%>
-                        </td>
-                        <td>
-                            <%=products[i].product_size%>
-                        </td>
-                        <td>
-                            <div style="height: 50px; width: 100%; background-color:<%=products[i].product_color%>"></div>
-                        </td>
+                        <th>Action</th>
+                        <th>Sr No.</th>
+                        <th>Product Type</th>
+                        <th>Product Name</th>
+                        <th>Product Price</th>
+                        <th>Product Size</th>
+                        <th>Product Color</th>
                     </tr>
-                <%}%>
-
+                </thead>
+                <tbody>
+                    <% if (typeof products !== 'undefined' && products.length > 0) { %>
+                        <% for(var i = 0; i < products.length; i++) { %>
+                            <tr>
+                                <td>
+                                    <a href="/admin/edit_product/<%= products[i]._id %>">
+                                        <button class="btn btn-success"><i class="fa fa-edit" style="font-size:24px"></i></button>
+                                    </a>
+                                    <a href="/admin/delete_product/<%= products[i]._id %>">
+                                        <button class="btn btn-danger"><i class="fa fa-trash-o" style="font-size:24px"></i></button>
+                                    </a>
+                                </td>
+                                <td><%= i + 1 %></td>
+                                <td><%= products[i].product_type_id ? products[i].product_type_id.product_type_name : 'N/A' %></td>
+                                <td><%= products[i].product_name %></td>
+                                <td>
+                                    <% const number = products[i].product_price;
+                                       const currency = 'INR';
+                                       const formatter = new Intl.NumberFormat('en-IN', {
+                                           style: 'currency',
+                                           currency: currency
+                                       });
+                                       const formattedNumber = formatter.format(number); %>
+                                    <%= formattedNumber %>
+                                </td>
+                                <td><%= products[i].product_size %></td>
+                                <td>
+                                    <div style="height: 50px; width: 100%; background-color:<%= products[i].product_color || '#FFFFFF' %>"></div>
+                                </td>
+                            </tr>
+                        <% } %>
+                    <% } else { %>
+                        <tr>
+                            <td colspan="7" class="text-center">No products found</td>
+                        </tr>
+                    <% } %>
+                </tbody>
             </table>
         </div>
     </div>
 </div>
-
-
 
 <%- include("footer.ejs") %>
