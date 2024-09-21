@@ -20,7 +20,7 @@
     "touch": "^3.1.0"
   },
    "engines": {
-  "node": "0.12.18"
+  "node": "4.9.1"
 },
   "name": "furniture_project",
   "version": "1.0.0",
