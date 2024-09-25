@@ -12,7 +12,7 @@ const Order = require('../models/Order');
 const Banner = require('../models/Banner');
 const Product1 = require('../models/Product1');
 const User = require('../models/User');
-const ContactUs = require('../models/ContactUs');
+const ContactUs = require('../models/contactUs');
 const Customer = require('../models/customer');
 const Admin = require('../models/admin');
 const UserCart = require('../models/UserCart');
@@ -21,6 +21,7 @@ const Cart = require('../models/Cart');
 const jwt = require('jsonwebtoken');
 const jwtSecret = "thisismynewtoken";
 const connectToCollection = require('../connection');
+//const Order = require('../models/Order');
 //const upload = require('../uploads');
 // const multer = require('multer');
 // const upload = multer({ dest: 'uploads/' });
@@ -344,6 +345,40 @@ router.post("/do_register", async (req, res) => {
 //   });
 
 
+
+//main code
+// router.get("/shop", async (req, res) => {
+//     try {
+//         const per_page = 8; // Products per page
+//         const page_no = parseInt(req.query.page_no) || 1; // Get the page number from query params, default to 1 if not provided
+//         const start = (page_no - 1) * per_page; // Calculate the starting index
+
+//         // Count total products for pagination
+//         const total_product = await Product.countDocuments();
+//         const total_pages = Math.ceil(total_product / per_page); // Calculate total pages
+
+//         // Fetch products for the current page, with pagination
+//         const products = await Product.find()
+//             .skip(start)
+//             .limit(per_page);
+
+//         // Object to pass to the EJS template
+//         const obj = {
+//             isLogin: req.session?.c_id ? true : false, // Check if user is logged in
+//             products: products,
+//             total_pages: total_pages,
+//             page_no: page_no
+//         };
+
+//         // Render the shop page with the products and pagination info
+//         res.render("user/shop.ejs", obj);
+//     } catch (error) {
+//         console.error("Error fetching products:", error);
+//         res.status(500).send("Internal Server Error");
+//     }
+// });
+
+
 router.get("/shop", async (req, res) => {
     try {
         const per_page = 8; // Products per page
@@ -354,18 +389,27 @@ router.get("/shop", async (req, res) => {
         const total_product = await Product.countDocuments();
         const total_pages = Math.ceil(total_product / per_page); // Calculate total pages
 
+        // Log pagination info
+        console.log(`Total Products: ${total_product}, Total Pages: ${total_pages}, Current Page: ${page_no}`);
+
         // Fetch products for the current page, with pagination
         const products = await Product.find()
             .skip(start)
             .limit(per_page);
 
-        // Object to pass to the EJS template
+        // Log the fetched products to verify they're retrieved correctly
+        console.log("Products Fetched:", products);
+
+        // Prepare object to pass to EJS template
         const obj = {
             isLogin: req.session?.c_id ? true : false, // Check if user is logged in
             products: products,
             total_pages: total_pages,
             page_no: page_no
         };
+
+        // Log the object to be rendered
+        console.log("Rendering Shop Page with Data:", obj);
 
         // Render the shop page with the products and pagination info
         res.render("user/shop.ejs", obj);
@@ -374,7 +418,6 @@ router.get("/shop", async (req, res) => {
         res.status(500).send("Internal Server Error");
     }
 });
-
 
 
   router.get("/about", async function(req, res) {
@@ -421,29 +464,62 @@ router.get("/blog", async function(req, res) {
     }
 });
 
-router.post('/contact', async (req, res) => {
-    try {
-        // Create a new contact submission
-        const newContact = new Contact({
-            fname: req.body.fname,
-            lname: req.body.lname,
-            email: req.body.email,
-            message: req.body.message
-        });
+// router.get('/contact', (req, res) => {
+//     res.render('contact', { success: req.query.success });
+// });
 
-        // Save to the database
-        await newContact.save();
+// // Handle form submission
+// router.post('/contact', async (req, res) => {
+//     try {
+//         const { fname, lname, email, message } = req.body;
 
-        // Redirect to a success page or display a message
-        res.send("Message sent successfully!");
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Server error");
-    }
+//         // Create a new contact document
+//         const newContact = new Contact({
+//             fname: fname,
+//             lname: lname,
+//             email: email,
+//             message: message
+//         });
+
+//         // Save the contact information to the database
+//         await newContact.save();
+
+//         // Redirect to the contact page with success message
+//         res.redirect("/contact?success=true");
+//     } catch (err) {
+//         console.error(err);
+//         res.status(500).send("Server error");
+//     }
+// });
+
+
+
+// // Newsletter Subscription
+// router.post("/newsLetter", async (req, res) => {
+//     const d = req.body;
+
+//     // Create a new Newsletter document
+//     const newNewsletter = new Newsletter({
+//         name: d.name,
+//         email: d.email
+//     });
+
+//     await newNewsletter.save();
+//     res.redirect("/contactUs");
+// });
+
+
+router.get('/contact', (req, res) => {
+    // Check if the query parameter 'success' is set to true
+    const success = req.query.success === 'true';
+    
+    // Render the contact page with the success variable
+    res.render('user/contact', { isLogin: req.session && req.session.user, success: success });
 });
 
-// Contact Us Form
-router.post('/contactUs', async (req, res) => {
+// Handle Contact Form Submission
+// Contact form submission (POST)
+router.post('/contact', async (req, res) => {
     try {
         // Create a new contact submission
         const newContact = new Contact({
@@ -456,28 +532,39 @@ router.post('/contactUs', async (req, res) => {
         // Save the contact information to the database
         await newContact.save();
 
-        // Redirect to a success page or render a thank you message
-        res.redirect("/contact?success=true");
+        // Redirect to the contact page with success=true in the query string
+        res.redirect('/contact?success=true');
     } catch (err) {
         console.error(err);
         res.status(500).send("Server error");
     }
 });
 
-
-
-// Newsletter Subscription
+// Handle Newsletter Subscription
 router.post("/newsLetter", async (req, res) => {
-    const d = req.body;
+    try {
+        const { name, email } = req.body;
 
-    // Create a new Newsletter document
-    const newNewsletter = new Newsletter({
-        name: d.name,
-        email: d.email
-    });
+        // Validate input (optional but recommended)
+        if (!name || !email) {
+            return res.status(400).send("Name and email are required.");
+        }
 
-    await newNewsletter.save();
-    res.redirect("/contact");
+        // Create a new Newsletter document
+        const newNewsletter = new Newsletter({
+            name,
+            email
+        });
+
+        // Save the newsletter subscription to the database
+        await newNewsletter.save();
+
+        // Redirect back to the contact page with a success message
+        res.redirect("/contact?newsletterSuccess=true");
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server error");
+    }
 });
 
 
@@ -505,35 +592,147 @@ router.post("/newsLetter", async (req, res) => {
 // });
 
 
-router.get("/product_info/:product_id", async (req, res) => {
+// router.get('/product_info', (req, res) => {
+//     // Check if the query parameter 'success' is set to true
+//     const success = req.query.success === 'true';
+    
+//     // Render the contact page with the success variable
+//     res.render('user/product_info', { isLogin: req.session && req.session.user, success: success });
+// });
+
+// router.get("/product_info/:product_id", async (req, res) => {
+//     try {
+//         const product_id = req.params.product_id;
+
+//         // Fetch product details
+//         const product_details = await Product.findById(product_id).populate('product_type_id').exec();
+
+//         if (!product_details) {
+//             return res.status(404).send("Product not found");
+//         }
+
+//         const user_id = req.session?.c_id; // Optional: Get user_id from session if available
+
+//         // Check if the product is in the user's cart
+//         const checkCart = user_id ? await UserCart.findOne({ user_id, product_id }) : null;
+
+//         const obj = {
+//             product: product_details, // Make sure 'product' is passed here
+//             isLogin: user_id ? true : false,
+//             in_cart: checkCart ? true : false
+//         };
+
+//         // Render the product_info.ejs view with the product data
+//         res.render("user/product_info", obj);
+//     } catch (error) {
+//         console.error("Error fetching product info:", error);
+//         res.status(500).send("Internal Server Error");
+//     }
+// });
+
+//main code
+// router.get("/product_info/:product_id?", async (req, res) => {
+   
+//     try {
+//         const product_id = req.params.product_id;
+
+//         // Find product details by product_id
+//         const product_details = await Product.findById(product_id).populate('product_type_id').exec();
+         
+//         if (!product_details) {
+           
+//             return res.status(404).send('Product not found');
+//         }
+
+
+//     // try {
+//     //     const products = await Product.find({}).populate('product_type_id');
+        
+//     //     res.render("user/product_info.ejs", { products });
+//     // console.log(product_details);
+//       //res.render('user/product_info.ejs', {product_details});
+
+//         const user_id = req.session.c_id; // Assuming user session stores user ID
+
+//         // Check if the product is in the user's cart
+//         const checkCart = await UserCart.findOne({
+//             user_id: user_id,
+//             product_id: product_id
+//         }).exec();
+
+//         // Prepare the response object
+//         const obj = {
+//             product: product_details,
+//             isLogin: req.session.c_id ? true : false,
+//             in_cart: checkCart ? true : false
+//         };
+
+//         // Render the EJS template with the product data
+//         res.render("user/product_info.ejs", obj);
+//     } catch (err) {
+//         console.error(err);
+//         res.status(500).send('Server Error');
+//     }
+// });
+
+
+router.get("/product_info/:product_id?", async (req, res) => {
     try {
         const product_id = req.params.product_id;
 
-        // Fetch product details
-        const product_details = await Product.findById(product_id).populate('product_type_id').exec();
+        // Log product_id to ensure it is coming through
+        console.log("Product ID:", product_id);
 
-        if (!product_details) {
-            return res.status(404).send("Product not found");
+        // Validate if product_id exists
+        if (!product_id) {
+            return res.status(400).send('Product ID is required');
         }
 
-        const user_id = req.session?.c_id; // Optional: Get user_id from session if available
+        // Find product details by product_id using findById
+        const product_details = await Product.findById(product_id).populate('product_type_id').exec();
+
+        // Log the product details to ensure it is fetched correctly
+        console.log("Product Details:", product_details);
+
+        if (!product_details) {
+            return res.status(404).send('Product not found');
+        }
+
+        const user_id = req.session?.c_id; // Assuming user session stores user ID
+
+        // Log the user ID to ensure session is working
+        console.log("User ID:", user_id);
 
         // Check if the product is in the user's cart
-        const checkCart = user_id ? await UserCart.findOne({ user_id, product_id }) : null;
+        // let checkCart = null;
+        let checkCart;
+        if (user_id) {
+            checkCart = await UserCart.findOne({
+                user_id: user_id,
+                product_id: product_id
+            }).exec();
+        }
 
+        // Log the cart check result
+        console.log("Cart Check:", checkCart);
+
+        // Prepare the response object
         const obj = {
             product: product_details,
             isLogin: user_id ? true : false,
             in_cart: checkCart ? true : false
         };
 
+        // Log the object before rendering
+        console.log("Response Object:", obj);
+
+        // Render the EJS template with the product data
         res.render("user/product_info.ejs", obj);
-    } catch (error) {
-        console.error("Error fetching product info:", error);
-        res.status(500).send("Internal Server Error");
+    } catch (err) {
+        console.error("Error fetching product details:", err);
+        res.status(500).send('Server Error');
     }
 });
-
 
 // router.get("/product_info/:product_id", async (req, res) => {
 //     try {
@@ -575,10 +774,17 @@ router.get("/product_info/:product_id", async (req, res) => {
 
 
 
-router.get("/add_to_cart/:user_id/:product_id", async (req, res) => {
-    const user_id = req.params.user_id;  // Fetch user_id from request parameters
-    const product_id = req.params.product_id;
+router.get("/add_to_cart/:product_id?", async (req, res) => {
+    const user_id = req.session.c_id;  // Fetch user_id from session
+    console.log(user_id);
+    const product_id = req.params.product_id;  // Fetch product_id from URL parameters
+    console.log(product_id);
     const qty = 1;
+
+    // Check if both user_id and product_id are present
+    if (!product_id || !user_id) {
+        return res.status(400).send("User ID and Product ID are required.");
+    }
 
     try {
         // Check if the product is already in the user's cart
@@ -593,33 +799,68 @@ router.get("/add_to_cart/:user_id/:product_id", async (req, res) => {
             cartItem.qty += 1;
             await cartItem.save();
         }
-        res.redirect(`/product_info/${product_id}`);  // Redirect to product info page
+
+        // Redirect to the product info page
+        res.redirect(`user/product_info/${product_id}`);  // Corrected redirect URL
     } catch (error) {
         console.error("Error while adding to cart:", error);
-        res.status(500).send("Server Error");
+        res.status(500).send("An error occurred while adding to the cart. Please try again.");
     }
 });
 
 
 
-router.get("/cart", async function(req, res) {
-    const user_id = req.session.c_id;
 
+// router.get("/cart", async function(req, res) {
+//     // const user_id = req.session.c_id;
+
+//     try {
+//         const user_id = req.session.c_id;
+//         // Fetch products from the user's cart and populate the product details
+//         const cart_products = await UserCart.find({ user_id })
+//             .populate('product_id')
+//             .exec();
+
+//         let obj = {
+//             "isLogin": req.session.c_id ? true : false,
+//             "products": cart_products.map(cartItem => {
+//                 return {
+//                     ...cartItem.product_id.toObject(),
+//                     qty: cartItem.qty,
+//                     cart_id: cartItem._id // for easier identification in the view
+//                 };
+//             })
+//         };
+
+//         res.render("user/cart.ejs", obj);
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).send('Server Error');
+//     }
+// });
+
+
+
+router.get("/cart", async function(req, res) {
     try {
+        const user_id = req.session.c_id;
         // Fetch products from the user's cart and populate the product details
         const cart_products = await UserCart.find({ user_id })
             .populate('product_id')
             .exec();
+            console.log(cart_products);
 
         let obj = {
-            "isLogin": req.session.c_id ? true : false,
-            "products": cart_products.map(cartItem => {
-                return {
-                    ...cartItem.product_id.toObject(),
-                    qty: cartItem.qty,
-                    cart_id: cartItem._id // for easier identification in the view
-                };
-            })
+            "isLogin": !!req.session.c_id,
+            "products": cart_products
+                .filter(cartItem => cartItem.product_id) // Filter out invalid product_ids
+                .map(cartItem => {
+                    return {
+                        ...cartItem.product_id.toObject(),
+                        qty: cartItem.qty,
+                        cart_id: cartItem._id // for easier identification in the view
+                    };
+                })
         };
 
         res.render("user/cart.ejs", obj);
@@ -628,7 +869,6 @@ router.get("/cart", async function(req, res) {
         res.status(500).send('Server Error');
     }
 });
-
 
 
 // Route to decrease the quantity of a product in the cart

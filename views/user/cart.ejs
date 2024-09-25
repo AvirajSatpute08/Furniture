@@ -33,7 +33,7 @@
                                 var sub_total = 0;
                                 for(var i=0; i<products.length; i++){
                                     sub_total = sub_total + (products[i].product_price * products[i].qty );
-                                    var imgs = products[i].product_image.split("~");
+                                    var imgs = products[i].product._image.split("~");
                                     var img = "";
                                     for (var j =0; j<imgs.length;j++){
                                         if(imgs[j] != ''){

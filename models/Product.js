@@ -1,11 +1,10 @@
 const mongoose = require('mongoose');
 
-// Define the schema for the Product model
 const productSchema = new mongoose.Schema({
     
     product_type_id: {
-        type: mongoose.Schema.Types.ObjectId, // Reference to ProductType model
-        ref: 'ProductType',
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'ProductType', // Reference to ProductType model
         required: true
     },
     product_name: {
@@ -25,14 +24,11 @@ const productSchema = new mongoose.Schema({
     product_color: {
         type: String
     },
-    product_label: {
-        type: String
-    },
     product_details: {
         type: String
     },
     product_image: {
-        type: [String], // Array of image filenames (assuming images are uploaded and saved in the file system)
+        type: [String], // Array of image filenames
         default: []
     },
     created_at: {
@@ -45,13 +41,11 @@ const productSchema = new mongoose.Schema({
     }
 });
 
-// Middleware to update `updated_at` field before saving
+// Middleware to update 'updated_at' field
 productSchema.pre('save', function(next) {
     this.updated_at = Date.now();
     next();
 });
 
-// Create the Product model
 const Product = mongoose.model('Product', productSchema);
-
 module.exports = Product;

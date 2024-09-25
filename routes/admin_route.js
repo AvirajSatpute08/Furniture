@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require('fs');
+const bcrypt = require('bcryptjs');
 const router = express.Router();
 const upload = require('../middleware/multerConfig');
 const ModernInterior = require('../models/ModernInterior');
@@ -11,7 +12,7 @@ const checkAdminLogin = require('../middleware/checkAdminLogin').default;
 //const checkUserLogin = require('../middleware/checkUserLogin');
 const Owner = require('../models/Owner');
 const Newsletter = require('../models/Newsletter');
-const ContactUs = require('../models/ContactUs');
+const ContactUs = require('../models/contactUs');
 const Order = require('../models/Order');
 const WhyChooseUs = require('../models/WhyChooseUs');
 const WhyChooseUsPoint = require('../models/WhyChooseUsPoint');
@@ -272,9 +273,22 @@ router.post("/save_product", upload.array('product_image'), async (req, res) => 
 //   }
 // });
 
+// router.get("/product_list", async function (req, res) {
+//   try {
+//     const products = await Product.find({}).populate('product_type_id');
+//     console.log("products",products)
+//     res.render("admin/product_list.ejs", { products });
+//   } catch (error) {
+//     console.error("Error fetching products:", error);
+//     res.status(500).send('Server error');
+//   }
+// });
+
+
 router.get("/product_list", async function (req, res) {
   try {
     const products = await Product.find({}).populate('product_type_id');
+    
     res.render("admin/product_list.ejs", { products });
   } catch (error) {
     console.error("Error fetching products:", error);

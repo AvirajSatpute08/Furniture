@@ -1,9 +1,11 @@
-// models/User.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-// User schema definition
 const userSchema = new mongoose.Schema({
+    c_id: {
+        type: String,
+        required: true,
+    },
     c_name: {
         type: String,
         required: true,
@@ -24,7 +26,7 @@ const userSchema = new mongoose.Schema({
     },
 });
 
-// Pre-save hook to hash the password before saving a user
+// Hash the password before saving the user
 userSchema.pre('save', async function (next) {
     if (!this.isModified('c_password')) {
         return next();
@@ -34,7 +36,7 @@ userSchema.pre('save', async function (next) {
     next();
 });
 
-// Method to compare entered password with hashed password
+// Method to compare password
 userSchema.methods.matchPassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.c_password);
 };

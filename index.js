@@ -59,14 +59,15 @@ const MongoStore = require('connect-mongo');
 const path = require('path');
 const {connectDB , connectToCollection} = require('./connection'); // MongoDB connection function
 const cookieParser = require('cookie-parser');
+//const favicon = require('serve-favicon');
 //const userRoutes = require('./routes/user_route'); 
 
 const app = express();
 app.use(express.json());  // Parse JSON bodies
 app.use(express.urlencoded({ extended: true }));  // Parse form data
 app.use(cookieParser());  // Parse cookies
-
-
+app.use(express.static('public'));
+//app.use(favicon(path.join(__dirname, 'public', 'favicon.png')));
 
 // Connect to MongoDB
 connectDB();
@@ -75,6 +76,7 @@ connectToCollection();
 // Set up EJS as the templating engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+
 
 // Serve static files from the "public" directory
 app.use(express.static(path.join(__dirname, 'public')));
