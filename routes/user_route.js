@@ -679,7 +679,7 @@ router.post("/newsLetter", async (req, res) => {
 router.get("/product_info/:product_id?", async (req, res) => {
     try {
         const product_id = req.params.product_id;
-
+       // const product_id = req.session?.product_id; 
         // Log product_id to ensure it is coming through
         console.log("Product ID:", product_id);
 
@@ -801,7 +801,7 @@ router.get("/add_to_cart/:product_id?", async (req, res) => {
         }
 
         // Redirect to the product info page
-        res.redirect(`user/product_info/${product_id}`);  // Corrected redirect URL
+        res.redirect(`/product_info/${product_id}`);  // Corrected redirect URL
     } catch (error) {
         console.error("Error while adding to cart:", error);
         res.status(500).send("An error occurred while adding to the cart. Please try again.");
@@ -844,25 +844,42 @@ router.get("/add_to_cart/:product_id?", async (req, res) => {
 router.get("/cart", async function(req, res) {
     try {
         const user_id = req.session.c_id;
+//console.log("userid",user_id);
+
         // Fetch products from the user's cart and populate the product details
         const cart_products = await UserCart.find({ user_id })
-            .populate('product_id')
-            .exec();
-            console.log(cart_products);
+        .populate('product_id') // Correct path to populate
+        .exec();
+    
 
+       // console.log(cart_products);
+
+        // Ensure products is an array and map through it
+        const products = cart_products
+        ? cart_products
+            .filter(cartItem => cartItem.product_id)
+            .map(cartItem => ({
+                ...cartItem.product_id.toObject(),
+                qty: cartItem.quantity,
+                cart_id: cartItem._id
+            }))
+        : [];
+      // console.log("products:",products);
+// let obj;
+// if(products){
+
+
+        // Set up the response object
         let obj = {
-            "isLogin": !!req.session.c_id,
-            "products": cart_products
-                .filter(cartItem => cartItem.product_id) // Filter out invalid product_ids
-                .map(cartItem => {
-                    return {
-                        ...cartItem.product_id.toObject(),
-                        qty: cartItem.qty,
-                        cart_id: cartItem._id // for easier identification in the view
-                    };
-                })
+            isLogin: !!req.session.c_id,
+            products: products
         };
+        console.log(obj);
+   // }
 
+// const isLogin= !!req.session.c_id ? true : false;
+// console.log(isLogin);
+// console.log(products);
         res.render("user/cart.ejs", obj);
     } catch (error) {
         console.error(error);
@@ -871,21 +888,64 @@ router.get("/cart", async function(req, res) {
 });
 
 
-// Route to decrease the quantity of a product in the cart
-router.get('/decrease_qty/:cart_id',async function (req, res) {
-    const cart_id = req.params.cart_id;
 
+// router.get("/cart", async function(req, res) {
+//     try {
+//         const user_id = req.session.c_id; // Assuming session contains user ID
+
+//         // Fetch cart items for the logged-in user, populating product details
+//         const cart_products = await UserCart.find({ user_id })
+//             .populate('product_id') // Populate product details from Product collection
+//             .exec();
+
+//         // Create an array of products with cart details
+//         const products = cart_products.map(cartItem => ({
+//             product: cartItem.product_id, // Product details
+//             qty: cartItem.qty,            // Quantity in the cart
+//             cart_id: cartItem._id          // Cart item ID
+//         }));
+
+//         const obj = {
+//             isLogin: !!req.session.c_id, // Check if user is logged in
+//             products: products            // Send products to the view
+//         };
+
+//         res.render('user/cart.ejs', obj); // Render the cart page with product details
+//     } catch (error) {
+//         console.error("Error fetching cart items:", error);
+//         res.status(500).send("An error occurred while fetching the cart. Please try again.");
+//     }
+// });
+
+
+// Route to decrease the quantity of a product in the cart
+router.get('/decrease_qty/:cart_id', async function (req, res) {
+    const cart_id = req.params.cart_id;
+//console.log("cart",cart_id);
     try {
+        // Find the cart item by its ID
         const cartItem = await UserCart.findById(cart_id);
 
-        if (cartItem && cartItem.qty > 1) {
-            cartItem.qty -= 1;
+        if (!cartItem) {
+            return res.status(404).json({ error: 'Cart item not found' });
+        }
+
+        // Ensure that the quantity is greater than 1 before decrementing
+        if (cartItem.quantity > 1) {
+            cartItem.quantity -= 1;
             await cartItem.save();
 
+            // Fetch the product details associated with the cart item
             const product = await Product.findById(cartItem.product_id);
-            const total = cartItem.qty * product.product_price;
 
-            res.json({ new_qty: cartItem.qty, total });
+            if (!product) {
+                return res.status(404).json({ error: 'Product not found' });
+            }
+
+            // Calculate the updated total price
+            const total = cartItem.quantity * product.product_price;
+
+            res.json({ new_qty: cartItem.quantity, total });
         } else {
             res.status(400).json({ error: 'Cannot decrease quantity below 1' });
         }
@@ -895,6 +955,7 @@ router.get('/decrease_qty/:cart_id',async function (req, res) {
     }
 });
 
+
 // Route to increase the quantity of a product in the cart
 router.get('/increase_qty/:cart_id', async function (req, res) {
     const cart_id = req.params.cart_id;
@@ -903,13 +964,13 @@ router.get('/increase_qty/:cart_id', async function (req, res) {
         const cartItem = await UserCart.findById(cart_id);
 
         if (cartItem) {
-            cartItem.qty += 1;
+            cartItem.quantity += 1;
             await cartItem.save();
 
             const product = await Product.findById(cartItem.product_id);
-            const total = cartItem.qty * product.product_price;
+            const total = cartItem.quantity * product.product_price;
 
-            res.json({ new_qty: cartItem.qty, total });
+            res.json({ new_qty: cartItem.quantity, total });
         } else {
             res.status(404).json({ error: 'Cart item not found' });
         }
@@ -932,11 +993,11 @@ router.get("/delete_from_cart/:id",async function(req, res){
 
 router.get("/checkout",async (req, res) => {
     const user_id = req.session.c_id;
-
+    //console.log("userid",user_id);
     try {
         // Fetch user's cart products and populate product details
-        const cart_products = await UserCart.find({ user_id }).populate('product').exec();
-
+        const cart_products = await UserCart.find({ user_id }).populate('product_id').exec();
+       //console.log("products",cart_products);
         const obj = {
             "cart_products": cart_products,
             "isLogin": req.session.c_id ? true : false
@@ -951,19 +1012,92 @@ router.get("/checkout",async (req, res) => {
 
 
 // Place Order
+// router.post("/place_order", async (req, res) => {
+//     try {
+//         const userId = req.session.c_id;
+//        // console.log("User ID from session:", userId);
+
+//         req.body.order_date = new Date().toISOString().slice(0, 10);
+//         let d = req.body;
+//         let order_status = 'pending';
+
+//         if (d.payment_mode === 'online') {
+//             order_status = 'payment_pending';
+//         }
+
+//         // Create the new order
+//         const newOrder = new Order({
+//             user_id: userId,
+//             country: d.c_country,
+//             c_fname: d.c_fname,
+//             c_lname: d.c_lname,
+//             c_address: d.c_address,
+//             c_area: d.c_area,
+//             c_state: d.c_state,
+//             c_postal_zip: d.c_postal_zip,
+//             c_email: d.c_email,
+//             c_phone: d.c_phone,
+//             payment_mode: d.payment_mode,
+//             order_date: d.order_date,
+//             order_status: order_status,
+//             payment_status: 'pending',
+//         });
+
+//         const savedOrder = await newOrder.save();
+
+//         // Fetch user's cart items
+//         const cart_products = await UserCart.find({ user_id: userId }).exec();
+//         console.log("Cart Products:", cart_products); // Log fetched cart products
+
+//         if (cart_products.length === 0) {
+//             return res.status(400).send("Cart is empty. Cannot place an order.");
+//         }
+
+//         // Check and save each cart product as an order product
+//         for (let product of cart_products) {
+//             // Ensure product price is available
+//             if (!product.product_price) {
+//                 console.error(`Product price missing for product_id: ${product.product_id}`);
+//                 continue; // Skip this product if price is missing
+//             }
+
+//             let orderProduct = new OrderProduct({
+//                 order_id: savedOrder._id,
+//                 user_id: userId,
+//                 product_id: product.product_id,
+//                 product_qty: product.quantity,
+//                 product_price: product.product_price, // Ensure this is defined
+//                 product_name: product.product_name,
+//                 product_details: product.product_details,
+//             });
+
+//             await orderProduct.save();
+//         }
+
+//         // Optionally, clear the cart after placing the order
+//         await Cart.deleteMany({ user_id: userId });
+
+//         res.status(200).send("Order placed successfully");
+//     } catch (error) {
+//         console.error("Error placing order:", error);
+//         res.status(500).send("Internal Server Error");
+//     }
+// });
+
+
+
 router.post("/place_order", async (req, res) => {
     try {
+        const userId = req.session.c_id; // Ensure session contains user ID
+
+        // Set order date and status
         req.body.order_date = new Date().toISOString().slice(0, 10);
         let d = req.body;
-        let order_status = 'pending';
-
-        if (d.payment_mode === 'online') {
-            order_status = 'payment_pending';
-        }
+        let order_status = d.payment_mode === 'online' ? 'payment_pending' : 'pending';
 
         // Create the new order
         const newOrder = new Order({
-            user_id: req.session.c_id,
+            user_id: userId,
             country: d.c_country,
             c_fname: d.c_fname,
             c_lname: d.c_lname,
@@ -981,25 +1115,46 @@ router.post("/place_order", async (req, res) => {
 
         const savedOrder = await newOrder.save();
 
-        // Fetch user's cart items
-        const cart_products = await Cart.find({ user_id: req.session.c_id });
+        // Fetch user's cart items and populate product details
+        const cart_products = await UserCart.find({ user_id: userId }).populate('product_id').exec();
 
-        for (let product of cart_products) {
+        console.log("Cart Products:", cart_products); // Log fetched cart products
+
+        if (cart_products.length === 0) {
+            return res.status(400).send("Cart is empty. Cannot place an order.");
+        }
+
+        // Loop over each cart product and process the order
+        for (let item of cart_products) {
+            const product = item.product_id; // Populated product details
+           
+            // Ensure product price is available
+            if (!product || !product.product_price) {
+                console.error(`Product price missing for product_id: ${product._id}`);
+                continue; // Skip this product if price is missing
+            }
+            //console.log(product_price);
+
+            // Create order product details
             let orderProduct = new OrderProduct({
                 order_id: savedOrder._id,
-                user_id: req.session.c_id,
-                product_id: product.product_id,
-                product_qty: product.qty,
-                product_price: product.product_price,
+                user_id: userId,
+                product_id: product._id,
+                product_qty: item.quantity,
+                product_price: product.product_price, // Use populated product price
                 product_name: product.product_name,
                 product_details: product.product_details,
             });
-
+           // console.log(product_price);
+          // console.log("order product",orderProduct);
+            // Save each order product
             await orderProduct.save();
+            //console.log("order product",orderProduct);
+
         }
 
         // Optionally, clear the cart after placing the order
-        await Cart.deleteMany({ user_id: req.session.c_id });
+        //await UserCart.deleteMany({ user_id: userId });
 
         res.status(200).send("Order placed successfully");
     } catch (error) {
@@ -1007,6 +1162,9 @@ router.post("/place_order", async (req, res) => {
         res.status(500).send("Internal Server Error");
     }
 });
+
+
+
 
 router.get("/pay_payment/:order_id", async (req, res) => {
     try {
@@ -1060,15 +1218,52 @@ router.post("/payment_success/:order_id", async (req, res) => {
 });
 
 
+// router.get("/my_orders", async (req, res) => {
+//     try {
+//         // Fetch all orders for the logged-in user, except those with 'payment_pending'
+//         const orders = await Order.find({ user_id: req.session.c_id, order_status: { $ne: 'payment_pending' } });
+//         console.log("orders",orders);
+
+//         // Calculate total amount for each order by summing the price * quantity of each product
+//         for (let order of orders) {
+//             const orderProducts = await OrderProduct.find({ order_id: order._id });
+//             console.log("order product",orderProducts);
+
+//             // Calculate total amount for the order
+//             let total_amt = 0;
+//             for (let product of orderProducts) {
+//                 total_amt += product.product_price * product.product_qty;
+//             }
+            
+//             // Add total amount to the order object
+//             order.total_amt = total_amt;
+//         }
+
+//         const obj = {
+//             "isLogin": req.session.c_id ? true : false,
+//             "orders": orders,
+//         };
+
+//         // Render the my_orders.ejs template and pass the orders with total amounts
+//         res.render("user/my_orders.ejs", obj);
+//     } catch (error) {
+//         console.error("Error fetching orders:", error);
+//         res.status(500).send("Internal Server Error");
+//     }
+// });
+
+
+
 router.get("/my_orders", async (req, res) => {
     try {
         // Fetch all orders for the logged-in user, except those with 'payment_pending'
         const orders = await Order.find({ user_id: req.session.c_id, order_status: { $ne: 'payment_pending' } });
 
-        // Calculate total amount for each order by summing the price * quantity of each product
         for (let order of orders) {
-            const orderProducts = await OrderProduct.find({ order_id: order._id });
-            
+            // Fetch associated products for each order
+            const orderProducts = await OrderProduct.find({ order_id: order._id }); // Ensure this correctly retrieves products
+            console.log("order product", orderProducts); // Check the output in the console
+
             // Calculate total amount for the order
             let total_amt = 0;
             for (let product of orderProducts) {

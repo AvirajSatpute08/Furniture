@@ -19,77 +19,82 @@
                             </thead>
                             <tbody>
 
-                                <%if(products.length <= 0){%>
+                                <% if(products.length <= 0) {%>
                                     <tr>
                                         <td colspan="6">
                                             <br><br>
-                                            <h3>No Product Available In Your Cart !!!</h3>
+                                            <h3> No Product Available In Your Cart !!!</h3>
                                             <br><br><br>
                                         </td>
                                     </tr>
 
                                 <%}%>
                                 <% 
-                                var sub_total = 0;
-                                for(var i=0; i<products.length; i++){
-                                    sub_total = sub_total + (products[i].product_price * products[i].qty );
-                                    var imgs = products[i].product._image.split("~");
-                                    var img = "";
-                                    for (var j =0; j<imgs.length;j++){
-                                        if(imgs[j] != ''){
-                                            img = imgs[j];
-                                            break;
-                                        }
-                                    }
-                                    %>
-                                    %>   
-                                <tr>
-                                    <td class="product-thumbnail">
-                                        <img src="/uploads/<%=img%>" alt="Image" class="img-fluid">
-                                    </td>
-                                    <td class="product-name">
-                                        <h2 class="h5 text-black"><%=products[i].product_name%></h2>
-                                    </td>
-                                    <td> 
-                                        <% var number=products[i].product_price; 
-                                            var currency='INR' ; 
-                                            var formatter=new Intl.NumberFormat('en-IN', {
-                                                style: 'currency' , 
-                                                currency: currency, }); 
-                                                var formattedNumber=formatter.format(number); %>
-                                                <%=formattedNumber%>
-                                        </td>
-                                    <td>
-                                        <div class="input-group mb-3 d-flex align-items-center quantity-container"
-                                            style="max-width: 120px;">
-                                            <div class="input-group-prepend">
-                                                <button class="btn btn-outline-black "
-                                                    type="button" onclick="decreaseQty('<%=products[i].cart_id%>')">&minus;</button>
-                                            </div>
-                                            <input type="text" class="form-control text-center quantity-amount" id="user_cart_qty<%=products[i].cart_id%>" value="<%=products[i].qty%>"
-                                                placeholder="" aria-label="Example text with button addon"
-                                                aria-describedby="button-addon1">
-                                            <div class="input-group-append">
-                                                <button class="btn btn-outline-black " onclick="increaseQty('<%=products[i].cart_id%>')" type="button">&plus;</button>
-                                            </div>
-                                        </div>
-    
-                                    </td>
-                                    <td>&#8377; <span class="all_product_total" id="user_cart_total<%=products[i].cart_id%>"> 
-                                            
-                                            <% const num=products[i].product_price * products[i].qty; 
-                                                const cur='INR' ; 
-                                                const formatted=new Intl.NumberFormat('en-IN', {
-                                                    style: 'currency' , 
-                                                    currency: cur, }); 
-                                                    var formattedNumber=formatted.format(num); %>
-                                                <%=formattedNumber%>
-                                        </span>
-                                    </td>
-                                    <td><a href="/delete_from_cart/<%=products[i].cart_id%>" class="btn btn-black btn-sm"><i class="fa fa-remove" style="font-size:24px"></i></a></td>
-                                </tr>
+var sub_total = 0;
+for (var i = 0; i < products.length; i++) {
+    sub_total += products[i].product_price * products[i].qty;
 
-                                <%}%>
+    // Ensure product_image is a valid string before attempting to split
+    var imgs = (typeof products[i].product_image === 'string') 
+        ? products[i].product_image.split("~") 
+        : [];
+
+    var img = "";
+    for (var j = 0; j < imgs.length; j++) {
+        if (imgs[j] !== '') {
+            img = imgs[j];
+            break;
+        }
+    }
+%>
+                                   
+<tr>
+    <td class="product-thumbnail">
+        <img src="/uploads/<%= img %>" alt="Image" class="img-fluid">
+    </td>
+    <td class="product-name">
+        <h2 class="h5 text-black"><%= products[i].product_name %></h2>
+    </td>
+    <td>
+        <% var number = products[i].product_price;
+        var currency = 'INR'; 
+        var formatter = new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: currency,
+        });
+        var formattedNumber = formatter.format(number); %>
+        <%= formattedNumber %>
+    </td>
+    <td>
+        <div class="input-group mb-3 d-flex align-items-center quantity-container" style="max-width: 120px;">
+            <div class="input-group-prepend">
+                <button class="btn btn-outline-black" type="button" onclick="decreaseQty('<%= products[i].cart_id %>')">&minus;</button>
+            </div>
+            <input type="text" class="form-control text-center quantity-amount" id="user_cart_qty<%= products[i].cart_id %>" value="<%= products[i].qty %>"
+                placeholder="" aria-label="Example text with button addon" aria-describedby="button-addon1">
+            <div class="input-group-append">
+                <button class="btn btn-outline-black" onclick="increaseQty('<%= products[i].cart_id %>')" type="button">&plus;</button>
+            </div>
+        </div>
+    </td>
+    <td>&#8377; 
+        <span class="all_product_total" id="user_cart_total<%= products[i].cart_id %>">
+            <% const num = products[i].product_price * products[i].qty; 
+            const cur = 'INR';
+            const formatted = new Intl.NumberFormat('en-IN', {
+                style: 'currency', 
+                currency: cur,
+            });
+            var formattedNumber = formatted.format(num); %>
+            <%= formattedNumber %>
+        </span>
+    </td>
+    <td>
+        <a href="/delete_from_cart/<%= products[i].cart_id %>" class="btn btn-black btn-sm"><i class="fa fa-remove" style="font-size:24px"></i></a>
+    </td>
+</tr>
+
+<% } %>
 
                             </tbody>
                         </table>

@@ -5,3 +5,5 @@ function checkLogin(req, res, next) {
         res.redirect('/login'); // Redirect to login if the user is not logged in
     }
 }
+
+module.export= checkLogin;

@@ -1,6 +1,5 @@
 {
   "dependencies": {
-    
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
     "connect-mongo": "^5.1.0",
@@ -12,6 +11,7 @@
     "express-session": "^1.18.0",
     "index.js": "^0.0.3",
     "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.9.0",
     "mongoose": "^8.6.2",
     "multer": "^1.4.5-lts.1",
     "mysql": "^2.18.1",
@@ -20,12 +20,9 @@
     "serve-favicon": "^2.5.0",
     "touch": "^3.1.0"
   },
-
-
-   "engines": {
-  "node": "20.11.0"
-},
-
+  "engines": {
+    "node": "20.11.0"
+  },
   "name": "furniture_project",
   "version": "1.0.0",
   "description": "Funiture Project",
@@ -37,7 +34,6 @@
     "Furniture",
     "Project"
   ],
-  "author": "Aviraj Satpute", 
-
+  "author": "Aviraj Satpute",
   "license": "ISC"
 }

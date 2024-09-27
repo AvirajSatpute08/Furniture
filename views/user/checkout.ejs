@@ -92,106 +92,92 @@
                         <div class="p-3 p-lg-5 border bg-white">
                             <table class="table site-block-order-table mb-5">
                                 <thead>
-                                    <th>Product</th>
-                                    <th>Total</th>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Total</th>
+                                    </tr>
                                 </thead>
                                 <tbody>
                                     <% 
                                     var subtotal = 0;
-                                    for(var i=0; i<cart_products.length;i++){
-                                        subtotal += (cart_products[i].product_price * cart_products[i].qty)
-                                        %>    
-                                        <tr>
-                                            <td><%=cart_products[i].product_name%> <strong class="mx-2">x</strong> <%=cart_products[i].qty%></td>
-                                            <td>
-                                                <% var number=cart_products[i].product_price * cart_products[i].qty; 
-                                                var currency='INR' ; 
-                                                var formatter=new Intl.NumberFormat('en-IN', {
-                                                    style: 'currency' , 
-                                                    currency: currency, 
-                                                    minimumFractionDigits: 0,
-                                                    maximumFractionDigits: 0,    
-
-                                                }); 
-                                                    var formattedNumber=formatter.format(number); %>
-                                                    <%=formattedNumber%>
-                                                </td>
-                                        </tr>
-                                    <%}%>
-                                   
-                                    <%
-                                        var discount = Number(subtotal * 0.2).toFixed();
-
-                                        var gst = Math.ceil(((subtotal - discount) * 0.12));
-
-                                        var total = Math.ceil((subtotal - discount + Number(gst)));
+                                    for (var i = 0; i < cart_products.length; i++) {
+                                        var product = cart_products[i].product_id; // Assuming product_id is populated
+                                        var quantity = cart_products[i].quantity; // Make sure qty is correctly referenced
+                                        var price = product.product_price; // Assuming product has price field
+                                
+                                        subtotal += (price * quantity);
+                                    %>
+                                    <tr>
+                                        <td><%= product.product_name %> <strong class="mx-2">x</strong> <%= quantity %></td>
+                                        <td>
+                                            <% 
+                                            var number = price * quantity; 
+                                            var formatter = new Intl.NumberFormat('en-IN', {
+                                                style: 'currency', 
+                                                currency: 'INR', 
+                                                minimumFractionDigits: 0,
+                                                maximumFractionDigits: 0,
+                                            });
+                                            %>
+                                            <%= formatter.format(number) %>
+                                        </td>
+                                    </tr>
+                                    <% } %>
+                                
+                                    <% 
+                                    var discount = Number(subtotal * 0.2).toFixed(0);
+                                    var gst = Math.ceil(((subtotal - discount) * 0.12));
+                                    var total = Math.ceil((subtotal - discount + Number(gst)));
                                     %>
                                     <tr>
                                         <td class="text-black font-weight-bold"><strong>Cart Subtotal</strong></td>
                                         <td class="text-black">
-                                            <% var number=subtotal; 
-                                                var currency='INR' ; 
-                                                var formatter=new Intl.NumberFormat('en-IN', {
-                                                    style: 'currency' , 
-                                                    currency: currency, }); 
-                                                    var formattedNumber=formatter.format(number); %>
-                                                    <%=formattedNumber%> </td>
+                                            <%= formatter.format(subtotal) %>
+                                        </td>
                                     </tr>
-
                                     <tr>
                                         <td class="text-black font-weight-bold"><strong>GST (12%): </strong></td>
-                                        <td class="text-black">
-                                           &#8377; <%=gst%>
-                                        </td>
+                                        <td class="text-black">&#8377; <%= gst %></td>
                                     </tr>
                                     <tr>
                                         <td class="text-black font-weight-bold"><strong>Discount (20%): </strong></td>
-                                        <td class="text-black">
-                                          &#8377;  <%=discount%>
-                                        </td>
+                                        <td class="text-black">&#8377; <%= discount %></td>
                                     </tr>
                                     <tr>
                                         <td class="text-black font-weight-bold"><strong>Order Total</strong></td>
-                                        <td class="text-black font-weight-bold"><strong> 
-                                            <% var number=total; 
-                                                var currency='INR' ; 
-                                                var formatter=new Intl.NumberFormat('en-IN', {
-                                                    style: 'currency' , 
-                                                    currency: currency, }); 
-                                                    var formattedNumber=formatter.format(number); %>
-                                                    <%=formattedNumber%> /-</strong></td>
+                                        <td class="text-black font-weight-bold"><strong>
+                                            <%= formatter.format(total) %> /-
+                                        </strong></td>
                                     </tr>
                                 </tbody>
-                            </table>
-
+                                                            </table>
+            
                             <div class="border p-3 mb-3">
                                 <h3 class="h6 mb-0">
-                                    <label class="d-block justify-content-center align-items-center " data-bs-toggle="collapse" href="#collapsebank"role="button">
-                                        <input type="radio" name="payment_mode"  value="cod" style="height: 17px; width: 17px; padding-top: 5px;" >
-                                         <span class="p-1"> Cash On Delivery (COD)</span>
+                                    <label class="d-block justify-content-center align-items-center " data-bs-toggle="collapse" href="#collapsebank" role="button">
+                                        <input type="radio" name="payment_mode" value="cod" style="height: 17px; width: 17px; padding-top: 5px;" aria-label="Cash On Delivery">
+                                        <span class="p-1"> Cash On Delivery (COD)</span>
                                     </label>
                                 </h3>
                             </div>
-
+            
                             <div class="border p-3 mb-3">
                                 <h3 class="h6 mb-0">
-                                    <label class="d-block" data-bs-toggle="collapse" href="#collapsecheque"
-                                        role="button" aria-expanded="false" aria-controls="collapsecheque">
-                                        <input type="radio" name="payment_mode" value="online" style="height: 17px; width: 17px; padding-top: 5px;" checked>
+                                    <label class="d-block" data-bs-toggle="collapse" href="#collapsecheque" role="button" aria-expanded="false" aria-controls="collapsecheque">
+                                        <input type="radio" name="payment_mode" value="online" style="height: 17px; width: 17px; padding-top: 5px;" checked aria-label="Online Payment">
                                         <span class="p-1"> Online Payment (Cards, UPI, Net Banking etc...) </span>
                                     </label>
                                 </h3>
                             </div>
-
+            
                             <div class="form-group">
                                 <button class="btn btn-black btn-lg py-3 btn-block">Place Order</button>
                             </div>
-
                         </div>
                     </div>
                 </div>
-
             </div>
+            
         </div>
     </div>
     </form>
