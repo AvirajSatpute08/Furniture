@@ -107,7 +107,7 @@ const adminRoutes = require('./routes/admin_route');
 // app.get('/', (req, res) => {
 //     res.render('index');  // Ensure 'index.ejs' exists in your views folder
 // });
-app.use('/', userRoutes); 
+//app.use('/', userRoutes); 
 app.use('/user', userRoutes);  // User routes
 app.use('/admin', adminRoutes);  // Admin routes
 //app.use('/admin', ownerRoutes); 
