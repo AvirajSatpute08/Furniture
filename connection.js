@@ -80,7 +80,7 @@ const mongoose = require('mongoose');
 const { MongoClient } = require('mongodb');
 
 const uri = process.env.MONGODB_URI;
-const dbName = process.env.DB_NAME;
+const dbName = process.env.DB_NAME || 'furniture';
 
 // Function to connect to MongoDB using Mongoose
 const connectDB = async () => {
