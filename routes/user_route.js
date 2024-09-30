@@ -1145,23 +1145,95 @@ router.post("/place_order", async (req, res) => {
                 product_name: product.product_name,
                 product_details: product.product_details,
             });
-           // console.log(product_price);
+           //console.log(product_price);
           // console.log("order product",orderProduct);
             // Save each order product
             await orderProduct.save();
-            //console.log("order product",orderProduct);
+            console.log("order product",orderProduct);
 
         }
 
         // Optionally, clear the cart after placing the order
         //await UserCart.deleteMany({ user_id: userId });
 
-        res.status(200).send("Order placed successfully");
+        res.status(200).send("Order status: Order placed successfully. (CashOnDelevery)....................Note: if your online payment is success only then Order placed successfully otherwise order in not placed hence ignore first messege");
+        
     } catch (error) {
         console.error("Error placing order:", error);
         res.status(500).send("Internal Server Error");
     }
 });
+
+
+
+// router.post("/place_order", async (req, res) => {
+//     try {
+//         const userId = req.session.c_id;
+
+//         // Set order date and status
+//         const orderDate = new Date().toISOString().slice(0, 10);
+//         const d = req.body;
+//         const order_status = d.payment_mode === 'online' ? 'payment_pending' : 'pending';
+
+//         // Fetch user's cart items and populate product details
+//         const cart_products = await UserCart.find({ user_id: userId }).populate('product_id').exec();
+
+//         console.log("Cart Products:", cart_products); // Log fetched cart products
+
+//         if (cart_products.length === 0) {
+//             return res.status(400).send("Cart is empty. Cannot place an order.");
+//         }
+
+//         // Prepare the items array for the order
+//         const orderItems = cart_products.map(item => {
+//             const product = item.product_id;
+
+//             // Ensure product exists and has price
+//             if (!product || !product.product_price) {
+//                 console.error(`Product data missing for product_id: ${product ? product._id : 'unknown'}`);
+//                 return null;
+//             }
+
+//             return {
+//                 product_id: product._id,
+//                 product_name: product.product_name,
+//                 product_details: product.product_details,
+//                 product_price: product.product_price,
+//                 product_qty: item.quantity
+//             };
+//         }).filter(item => item !== null);
+
+//         // Create the new order with items
+//         const newOrder = new Order({
+//             user_id: userId,
+//             country: d.c_country,
+//             c_fname: d.c_fname,
+//             c_lname: d.c_lname,
+//             c_address: d.c_address,
+//             c_area: d.c_area,
+//             c_state: d.c_state,
+//             c_postal_zip: d.c_postal_zip,
+//             c_email: d.c_email,
+//             c_phone: d.c_phone,
+//             payment_mode: d.payment_mode,
+//             order_date: orderDate,
+//             order_status: order_status,
+//             payment_status: 'pending',
+//             items: orderItems // Add items to the order
+//         });
+
+//         const savedOrder = await newOrder.save();
+//         console.log("Order saved:", savedOrder);
+
+//         // Optionally, clear the cart after placing the order
+//         // await UserCart.deleteMany({ user_id: userId });
+
+//         res.status(200).send("Order placed successfully");
+//     } catch (error) {
+//         console.error("Error placing order:", error);
+//         res.status(500).send("Internal Server Error");
+//     }
+// });
 
 
 
@@ -1254,38 +1326,81 @@ router.post("/payment_success/:order_id", async (req, res) => {
 
 
 
+// router.get("/my_orders", async (req, res) => {
+//     try {
+//         // Fetch all orders for the logged-in user, except those with 'payment_pending'
+//         const orders = await Order.find({ user_id: req.session.c_id, order_status: { $ne: 'payment_pending' } });
+// console.log("order",orders);
+//         for (let order of orders) {
+//             // Fetch associated products for each order
+//             const orderProducts = await OrderProduct.find({ order_id: order._id }); // Ensure this correctly retrieves products
+//             console.log("order product", orderProducts); // Check the output in the console
+
+//             // Calculate total amount for the order
+//             let total_amt = 0;
+//             for (let product of orderProducts) {
+//                 total_amt += product.product_price * product.product_qty;
+//             }
+            
+//             // Add total amount to the order object
+//             order.total_amt = total_amt;
+//         }
+
+//         const obj = {
+//             "isLogin": req.session.c_id ? true : false,
+//             "orders": orders,
+//         };
+
+//         // Render the my_orders.ejs template and pass the orders with total amounts
+//         res.render("user/my_orders.ejs", obj);
+//     } catch (error) {
+//         console.error("Error fetching orders:", error);
+//         res.status(500).send("Internal Server Error");
+//     }
+// });
+
+
 router.get("/my_orders", async (req, res) => {
     try {
-        // Fetch all orders for the logged-in user, except those with 'payment_pending'
-        const orders = await Order.find({ user_id: req.session.c_id, order_status: { $ne: 'payment_pending' } });
+        const userId = req.session.c_id;
+        if (!userId) {
+            return res.status(401).send("Unauthorized");
+        }
 
+        // Fetch all orders for the logged-in user, excluding those with 'payment_pending'
+        const orders = await Order.find({ user_id: userId, order_status: { $ne: 'payment_pending' } });
+
+        // Log orders to ensure we're fetching them correctly
+        console.log("Orders:", orders);
+
+        // Iterate through each order to fetch associated products and calculate the total amount
         for (let order of orders) {
-            // Fetch associated products for each order
-            const orderProducts = await OrderProduct.find({ order_id: order._id }); // Ensure this correctly retrieves products
-            console.log("order product", orderProducts); // Check the output in the console
+            const orderProducts = await OrderProduct.find({ order_id: order._id }); // Fetch associated products
 
-            // Calculate total amount for the order
+            console.log("Order Products for Order ID", order._id, ":", orderProducts); // Log order products
+
+            // Calculate the total amount for the current order
             let total_amt = 0;
             for (let product of orderProducts) {
-                total_amt += product.product_price * product.product_qty;
+                total_amt += product.product_price * product.product_qty; // Add the price multiplied by quantity
             }
-            
-            // Add total amount to the order object
+
+            // Add the calculated total amount to the order object
             order.total_amt = total_amt;
         }
 
-        const obj = {
-            "isLogin": req.session.c_id ? true : false,
-            "orders": orders,
-        };
+        // Pass the orders with total amounts to the EJS template
+        res.render("user/my_orders.ejs", {
+            isLogin: req.session.c_id ? true : false,
+            orders: orders,
+        });
 
-        // Render the my_orders.ejs template and pass the orders with total amounts
-        res.render("user/my_orders.ejs", obj);
     } catch (error) {
         console.error("Error fetching orders:", error);
         res.status(500).send("Internal Server Error");
     }
 });
+
 
 
 

@@ -2,17 +2,17 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require('fs');
-//const bcrypt = require('bcryptjs');
+const bcrypt = require('bcryptjs');
 const router = express.Router();
 const upload = require('../middleware/multerConfig');
 const ModernInterior = require('../models/ModernInterior');
 const Testimonial = require('../models/Testimonial');
 const Blog = require('../models/Blog');
-//const checkAdminLogin = require('../middleware/checkAdminLogin').default;
+const checkAdminLogin = require('../middleware/checkAdminLogin').default;
 //const checkUserLogin = require('../middleware/checkUserLogin');
 const Owner = require('../models/Owner');
 const Newsletter = require('../models/Newsletter');
-const ContactUs = require('../models/ContactUs');
+const ContactUs = require('../models/contactUs');
 const Order = require('../models/Order');
 const WhyChooseUs = require('../models/WhyChooseUs');
 const WhyChooseUsPoint = require('../models/WhyChooseUsPoint');
@@ -29,6 +29,8 @@ const mongoose = require('mongoose');
 const Banner = require('../models/Banner');
 const ProductType = require('../models/ProductType');
 const Product = require('../models/Product');
+const OrderProduct = require('../models/OrderProduct');
+
 
 // Multer setup for file upload
 // const storage = multer.diskStorage({
@@ -106,19 +108,53 @@ router.post("/save_banner", upload.single('banner_image'), async (req, res) => {
   }
 });
 
-router.get("/product_type",  async function (req, res) {
-  const types = await ProductType.find();
-  res.render("admin/product_type.ejs", { types });
+// router.get("/product_type",  async function (req, res) {
+//   const types = await ProductType.find();
+//   res.render("admin/product_type.ejs", { types });
+// });
+
+
+
+router.get("/product_type", async function (req, res) {
+  try {
+    const types = await ProductType.find();
+    res.render("admin/product_type.ejs", { types });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error fetching product types');
+  }
 });
 
 // Route to save a new product type
-router.post("/save_product_type",  async (req, res) => {
+// router.post("/save_product_type",  async (req, res) => {
+//   const newType = new ProductType({
+//       product_type_name: req.body.product_type_name
+//   });
+//   await newType.save();
+//   res.redirect("/admin/product_type");
+// });
+
+
+router.post("/save_product_type", async (req, res) => {
+  // Check if product_type_id is provided in the request body
+  if (!req.body.product_type_id) {
+    return res.status(400).send('product_type_id is required.');
+  }
+
   const newType = new ProductType({
-      product_type_name: req.body.product_type_name
+    product_type_id: req.body.product_type_id,  // Collecting product_type_id from the form
+    product_type_name: req.body.product_type_name
   });
-  await newType.save();
-  res.redirect("/admin/product_type");
+
+  try {
+    await newType.save();
+    res.redirect("/admin/product_type");
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error saving product type');
+  }
 });
+
 
 
 
@@ -1028,27 +1064,77 @@ router.get('/deleteNewsLetter/:id', async (req, res) => {
 });
 
 
-router.get('/pending_order',async (req, res) => {
+// router.get('/pending_order',async (req, res) => {
+//   try {
+//     const orders = await Order.find({ status: 'pending' });
+//     res.render('admin/pending_order.ejs', { orders });
+//   } catch (error) {
+//     console.error('Error fetching pending orders:', error);
+//     res.status(500).send('Internal Server Error');
+//   }
+// });
+
+
+
+router.get('/pending_order', async (req, res) => {
   try {
-    const orders = await Order.find({ status: 'pending' });
-    res.render('admin/pending_order.ejs', { orders });
+      // Fetch pending orders
+      const orders = await Order.find({ order_status: 'pending' });
+
+      // Calculate total amount for each order if not already present
+      for (let order of orders) {
+          const orderProducts = await OrderProduct.find({ order_id: order._id });
+          let total_amt = 0;
+          orderProducts.forEach(product => {
+              total_amt += product.product_price * product.product_qty;
+          });
+
+          // Add total amount to the order object
+          order.total_amt = total_amt;
+      }
+
+      // Render the 'pending_order' view with the orders
+      res.render('admin/pending_order.ejs', { orders });
   } catch (error) {
-    console.error('Error fetching pending orders:', error);
-    res.status(500).send('Internal Server Error');
+      console.error('Error fetching pending orders:', error);
+      res.status(500).send('Internal Server Error');
   }
 });
 
 
-
  // View order details
-router.get('/view_order/:id',  async (req, res) => {
+// router.get('/view_order/:id',  async (req, res) => {
+//   try {
+//     // Find the order by ID and populate related product details
+//     const order = await Order.findById(req.params.id).populate('items.product_id');
+//     console.log(order)
+//     // Ensure products are populated correctly
+//     const products = order.items.map(item => item.product_id);
+    
+//     res.render('admin/view_order.ejs', { order_info: order, products });
+//   } catch (error) {
+//     console.error('Error fetching order details:', error);
+//     res.status(500).send('Internal Server Error');
+//   }
+// });
+
+
+
+router.get('/view_order/:id', async (req, res) => {
   try {
-    // Find the order by ID and populate related product details
+    // Find the order by ID and populate related product details (assuming product_id is in order items)
     const order = await Order.findById(req.params.id).populate('items.product_id');
     
-    // Ensure products are populated correctly
-    const products = order.items.map(item => item.product_id);
-    
+    // Extract product details from order items
+    const products = order.items.map(item => {
+      return {
+        product_name: item.product_id.product_name,
+        product_details: item.product_id.product_details,
+        product_price: item.product_id.product_price,
+        product_qty: item.product_qty 
+           };
+    });
+
     res.render('admin/view_order.ejs', { order_info: order, products });
   } catch (error) {
     console.error('Error fetching order details:', error);
@@ -1056,11 +1142,13 @@ router.get('/view_order/:id',  async (req, res) => {
   }
 });
 
+
   
   // Dispatch an order
 router.get('/dispatch_order/:id',  async (req, res) => {
   try {
     await Order.findByIdAndUpdate(req.params.id, { status: 'dispatched' });
+    console.log("order",Order)
     res.redirect('/admin/pending_order');
   } catch (error) {
     console.error('Error dispatching order:', error);
